@@ -7,25 +7,13 @@ die() {
 	exit 1
 }
 
-determine_arch() {
-	if test -n "$1"
-	then
-		echo $1
-	else
-		# Allow hardlinks of $prog-<ARCH>
-		a=$(echo $prog | sed -e 's/.*-//')
-		echo $a
-	fi
-}
-
 image=zImage
 initrd=initrd.gz
 pagesize=2048
 cmdline=
 base=
 
-arch=$(determine_arch $@)
-case "$arch" in
+case "$1" in
 g1 | 7201 | 7201a)
 	cmdline="console=ttyMSM2,115200,n8"
 	base=0x10000000
@@ -44,7 +32,7 @@ g1 | 7201 | 7201a)
 	base=0x80200000
 	;;
 *)
-	die "Unknown architecture $arch"
+	die "Unknown architecture $1"
 	;;
 esac
 
