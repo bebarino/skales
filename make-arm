@@ -1,0 +1,4 @@
+#!/bin/sh
+# ARM compiler wrapper
+
+make ARCH=arm O=../kobj CROSS_COMPILE=arm-eabi- $@

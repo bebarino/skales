@@ -1,0 +1,62 @@
+#!/bin/sh
+
+prog=$(basename $0)
+
+die() {
+	echo >&2 "$@"
+	exit 1
+}
+
+determine_arch() {
+	if test -n "$1"
+	then
+		echo $1
+	else
+		# Allow hardlinks of $prog-<ARCH>
+		a=$(echo $prog | sed -e 's/.*-//')
+		echo $a
+	fi
+}
+
+image=zImage
+initrd=initrd.gz
+pagesize=2048
+cmdline=
+base=
+
+arch=$(determine_arch $@)
+case "$arch" in
+g1 | 7201 | 7201a)
+	cmdline="console=ttyMSM2,115200,n8"
+	base=0x10000000
+	;;
+7x30 | 7630 | 7230)
+	cmdline="console=ttyMSM1,115200,n8"
+	base=0x200000
+	pagesize=4096
+	;;
+8660 | 8x60)
+	cmdline="console=hvc0"
+	base=0x40200000
+	;;
+8960)
+	cmdline="console=hvc0"
+	base=0x80200000
+	;;
+*)
+	die "Unknown architecture $arch"
+	;;
+esac
+
+image=arch/arm/boot/$image
+
+test -f ../kobj/$image || die "Can't find $image. Build a kernel?"
+test -f ../initrds/$initrd || die "Can't find $initrd. Any initrds?"
+
+mkbootimg --kernel ../kobj/$image \
+	--ramdisk ../initrds/$initrd \
+	--cmdline "$cmdline" \
+	--base $base \
+	--pagesize $pagesize \
+	--output ../boot.img &&
+echo "Packaged $(readlink -f ../boot.img)"

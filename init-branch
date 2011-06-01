@@ -1,0 +1,30 @@
+#!/bin/sh
+#
+# Create a branch under b/
+
+prog=$(basename $0)
+
+die() {
+	echo >&2 "$@"
+	exit 1
+}
+
+USAGE="$prog <branch> [defconfig]"
+
+if test -z $1
+then
+	die $USAGE
+fi
+
+base=b/$1
+defconfig=$2
+
+# Make new directory for branch
+git-new-workdir .git $base/kernel $1 &&
+mkdir $base/kobj &&
+
+# Copy optional defconfig to the kobj directory
+test -f "$defconfig" &&
+cp $defconfig $base/kobj/.config
+
+ln -s $(readlink -f initrds) $base/initrds
