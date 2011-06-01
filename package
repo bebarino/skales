@@ -1,14 +1,33 @@
 #!/bin/sh
 
 prog=$(basename $0)
+USAGE="$prog <arch> [initrd]"
 
 die() {
-	echo >&2 "$@"
+	printf >&2 "%s\n" "$@"
 	exit 1
 }
 
+check_initrd() {
+	if ! test -f "../initrds/$initrd"
+	then
+		echo >&2 "fatal: missing initrd '$initrd'"
+		echo >&2 "Available initrds:"
+		for x in ../initrds/*
+		do
+			printf >&2 "  %s\n" "${x#../initrds/}"
+		done
+		exit 1
+	fi
+}
+
+if test -z "$1"
+then
+	die "usage: $USAGE"
+fi
+
 image=zImage
-initrd=initrd.gz
+initrd=${2:-initrd.gz}
 pagesize=2048
 cmdline=
 base=
@@ -39,7 +58,7 @@ esac
 image=arch/arm/boot/$image
 
 test -f ../kobj/$image || die "Can't find $image. Build a kernel?"
-test -f ../initrds/$initrd || die "Can't find $initrd. Any initrds?"
+check_initrd
 
 mkbootimg --kernel ../kobj/$image \
 	--ramdisk ../initrds/$initrd \
