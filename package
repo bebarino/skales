@@ -27,10 +27,10 @@ then
 fi
 
 image=zImage
-initrd=${2:-initrd.gz}
 pagesize=2048
 cmdline=
 base=
+initrd=
 
 case "$1" in
 g1 | 7201 | 7201a)
@@ -55,7 +55,51 @@ g1 | 7201 | 7201a)
 	;;
 esac
 
+while test $# != 0
+do
+	case "$1" in
+	--kernel|--kernel=*)
+		case "$#,$1" in
+		*,*=*)
+			kernel=`expr "z$1" : 'z-[^=]*=\(.*\)'` ;;
+		1,*)
+			die "bad" ;;
+		*)
+			kernel="$2"
+			shift ;;
+		esac
+		;;
+	--cmdline|--cmdline=*)
+		case "$#,$1" in
+		*,*=*)
+			cmdline=`expr "z$1" : 'z-[^=]*=\(.*\)'` ;;
+		1,*)
+			die "bad" ;;
+		*)
+			cmdline="$2"
+			shift ;;
+		esac
+		;;
+	--base|--base=*)
+		case "$#,$1" in
+		*,*=*)
+			base=`expr "z$1" : 'z-[^=]*=\(.*\)'` ;;
+		1,*)
+			die "bad" ;;
+		*)
+			base="$2"
+			shift ;;
+		esac
+		;;
+	*)
+		initrd="$1"
+		;;
+	esac
+	shift
+done
+
 image=arch/arm/boot/$image
+initrd="${initrd:-initrd.gz}"
 
 test -f ../kobj/$image || die "Can't find $image. Build a kernel?"
 check_initrd
