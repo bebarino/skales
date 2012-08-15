@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Create a branch under b/
+# Create a new working directory in the current directory
 
 prog=$(basename $0)
 
@@ -11,20 +11,21 @@ die() {
 
 USAGE="$prog <branch> [defconfig]"
 
-if test -z $1
+branch="$1"
+base=$PWD
+defconfig=$2
+
+if test -z $branch
 then
 	die "usage: $USAGE"
 fi
 
-base=b/$1
-defconfig=$2
-
 # Make new directory for branch
-git-new-workdir .git $base/kernel $1 &&
+git-new-workdir $META_ROOT/.git $base/kernel $branch &&
 mkdir $base/kobj &&
 
 # Copy optional defconfig to the kobj directory
 test -f "$defconfig" &&
-cp $defconfig $base/kobj/.config
+cp $defconfig kobj/.config
 
-ln -s $(readlink -f initrds) $base/initrds
+ln -s $(readlink -f $META_ROOT/initrds) initrds

@@ -1,3 +1,4 @@
 #!/bin/sh
 
-export PATH=$PATH:$PWD
+export PATH="$PATH:$PWD"
+export META_ROOT="$PWD"
