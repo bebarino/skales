@@ -26,7 +26,7 @@ then
 	die "usage: $USAGE"
 fi
 
-image=zImage pagesize=2048 cmdline= base= initrd= fixup_base=
+image=zImage pagesize=2048 cmdline= base= initrd= fixup_base= dtb=
 
 case "$1" in
 g1 | 7201 | 7201a)
@@ -50,6 +50,7 @@ g1 | 7201 | 7201a)
 	cmdline="console=ttyMSM0,115200,n8"
 	base=0x86000000 # Put it high to avoid relocation
 	fixup_base=0x80200000
+	dtb=msm8960-cdp.dtb
 	;;
 *)
 	die "Unknown architecture $1"
@@ -103,6 +104,11 @@ image=arch/arm/boot/$image
 initrd="${initrd:-initrd.gz}"
 
 test -f ../kobj/$image || die "Can't find $image. Build a kernel?"
+if test -n "$dtb"
+then
+	dtb="arch/arm/boot/$dtb"
+	test -f ../kobj/$dtb || die "Can't find $dtb. Build a device tree blob?"
+fi
 check_initrd
 
 # Compile the atag fixup if necessary
@@ -115,6 +121,13 @@ then
 
 	cat $fixup.bin ../kobj/$image > ../kobj/fImage &&
 	image=../kobj/fImage || die "Can't build fixup"
+fi
+
+# append any blob to the image
+if test -n "$dtb"
+then
+	cat $image ../kobj/$dtb > ../kobj/dImage &&
+	image=../kobj/dImage || die "Can't combine zImage and dtb"
 fi
 
 mkbootimg --kernel ../kobj/$image \
