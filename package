@@ -26,11 +26,7 @@ then
 	die "usage: $USAGE"
 fi
 
-image=zImage
-pagesize=2048
-cmdline=
-base=
-initrd=
+image=zImage pagesize=2048 cmdline= base= initrd= fixup_base=
 
 case "$1" in
 g1 | 7201 | 7201a)
@@ -49,6 +45,11 @@ g1 | 7201 | 7201a)
 8960)
 	cmdline="console=hvc0"
 	base=0x80200000
+	;;
+8960dt)
+	cmdline="console=ttyMSM0,115200,n8"
+	base=0x86000000 # Put it high to avoid relocation
+	fixup_base=0x80200000
 	;;
 *)
 	die "Unknown architecture $1"
@@ -103,6 +104,18 @@ initrd="${initrd:-initrd.gz}"
 
 test -f ../kobj/$image || die "Can't find $image. Build a kernel?"
 check_initrd
+
+# Compile the atag fixup if necessary
+if test -n "$fixup_base"
+then
+	fixup="$META_ROOT/atag-fix/fixup"
+	${CROSS_COMPILE}gcc -c -DFIXUP_ATAG_ADDRESS="$fixup_base" $fixup.S \
+		-o $fixup.o &&
+	${CROSS_COMPILE}objcopy -O binary $fixup.o $fixup.bin &&
+
+	cat $fixup.bin ../kobj/$image > ../kobj/fImage &&
+	image=../kobj/fImage || die "Can't build fixup"
+fi
 
 mkbootimg --kernel ../kobj/$image \
 	--ramdisk ../initrds/$initrd \
