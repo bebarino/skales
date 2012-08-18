@@ -1,0 +1,84 @@
+#! /usr/bin/env python
+#
+# Drop in replacement for android's mkbootimg plus some more additions
+#
+
+from struct import pack
+import os
+from optparse import OptionParser
+
+def write_padding(f, pagesize):
+	count = pagesize - (f.tell() % pagesize)
+	output.write("".join(['\x00' for x in xrange(count)]))
+
+if __name__ == "__main__":
+	usage = ("""%prog [options]""")
+	parser = OptionParser(usage=usage)
+	# Standard options
+	parser.add_option("--kernel", dest="kernel", metavar="FILE",
+			  help="Input kernel image")
+	parser.add_option("--ramdisk", dest="ramdisk", metavar="FILE",
+			  help="Input ramdisk image")
+	parser.add_option("--base", type="int", dest="base",
+			  help="Start address of kernel image")
+	parser.add_option("--output", dest="output", metavar="FILE",
+			  help="Write output to FILE")
+	parser.add_option("--cmdline", dest="cmdline",
+			  help="Kernel command line")
+	parser.add_option("--pagesize", type="int", dest="pagesize",
+			  default=2048,
+			  help="NAND pagesize [default: %default]")
+	# New options
+	parser.add_option("--ramdisk_base", type="int", dest="ramdisk_base",
+			  default=-1, help="Start address of ramdisk image")
+
+	(options, args) = parser.parse_args()
+
+	if options.kernel is None:
+		parser.error("Must specify --kernel")
+	if options.ramdisk is None:
+		parser.error("Must specify --ramdisk")
+	if options.output is None:
+		parser.error("Must specify --output")
+	if options.base is None:
+		parser.error("Must specify --base")
+	if options.cmdline is None:
+		parser.error("Must specify --cmdline")
+
+	try:
+		kernel = open(options.kernel, 'rb')
+	except IOError:
+		exit("Can't open %s" % options.kernel)
+	try:
+		ramdisk = open(options.ramdisk, 'rb')
+	except IOError:
+		exit("Can't open %s" % options.ramdisk)
+	try:
+		output = open(options.output, 'wb')
+	except IOError:
+		exit("Can't open %s" % options.output)
+
+	pagesize = options.pagesize
+	tags = options.base + 0x100
+	ramdisk_base = options.ramdisk_base if options.ramdisk_base != -1 else options.base + 0x2000000
+
+	hdr_format = "<8sIIIIIIII2I16s512s8I"
+	output.write(pack(hdr_format,
+			  "ANDROID!",
+			  os.fstat(kernel.fileno()).st_size,
+			  options.base + 0x8000,
+			  os.fstat(ramdisk.fileno()).st_size,
+			  ramdisk_base,
+			  0, 0,
+			  tags,
+			  options.pagesize,
+			  0, 0,
+			  "",
+			  options.cmdline,
+			  123456, 123456, 123456, 123456, 123456, 123456,
+			  0, 0))
+	write_padding(output, pagesize)
+	output.write(kernel.read())
+	write_padding(output, pagesize)
+	output.write(ramdisk.read())
+	write_padding(output, pagesize)
