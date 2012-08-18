@@ -1,0 +1,105 @@
+Skales
+-----------
+
+These are the scripts which I use to build the kernel on a day-to-day
+basis. They mostly deal with building the kernel and packaging it up
+into a format that Android bootloaders are happy to deal with. The scripts
+are designed with the 'do one thing, and do it well' mantra in mind.
+Therefore there are separate scripts to setup, compile, package the
+kernel, etc. and they're all assembled into a 'toolbox' that goes in
+your $PATH.
+
+Background
+----------
+
+This collection of scripts is meant to be used as a 'meta' branch within your
+kernel.git. It is distributed as a standalone branch that you can fetch
+into your repository.
+
+ kernel.git $ git remote add skales skales.git
+ kernel.git $ git fetch skales
+ kernel.git $ git checkout -t skales/master -b meta
+
+Checking out the meta branch should present you with a collection of scripts
+and some directories.
+
+ kernel.git $ ls
+ README atag-fix init-branch initrds
+ make-arm mkbootimg package source-me
+
+ 'README' - This file
+
+ 'atag-fix' - Contains the atag fixup hack for broken bootloaders
+
+ 'init-branch' - Command to initialize a new working tree based off a
+                 particular branch. This relies on the git-new-workdir script
+		 from the git.git repository to be present in your path. The
+		 latest version of the script can be downloaded on
+		 kernel.org[1].
+
+ 'initrds' - Directory containing initrds to use as ramdisks (user supplied)
+
+ 'make-arm' - Simple Makefile wrapper to build an ARM kernel
+
+ 'mkbootimg' - Clone of mkbootimg from Android (creates a boot.img for booting)
+
+ 'package' - Creates a boot.img with the correct parameters for a particular
+             machine
+
+ 'source-me' - Environment setup script to put these scripts into the path and
+               set up the requisite environment variables
+
+Getting Started
+---------------
+
+A typical workflow would be as follows:
+
+ 1. Source the source-me script
+
+        $ . source-me
+
+ 1.1 Choose a cross-compiler
+
+        $ export CROSS_COMPILE=/path/to/my/compiler/arm-eabi-
+
+ 2. Initialize a new working branch (b/ is not necessary but default ignored)
+    with an optional defconfig (in this example we'll use no defconfig)
+
+        $ mkdir -p b/my-branch
+        $ cd b/my-branch
+        $ init-branch my-branch
+        $ ls
+        initrds kernel kobj
+
+    You'll notice that 'initrds' is a symlink to the initrds within the meta
+    branch. The 'kernel' directory contains the sources of the kernel tree
+    checked out to the branch that was specified (in this case my-branch). The
+    'kobj' directory contains any object files and build products.
+
+ 3. Enter the kernel directory and configure your kernel
+
+        $ make-arm menuconfig
+        <configure things>
+
+ 4. Build the kernel
+
+        $ make-arm -j
+
+ 5. Package the kernel up into a boot.img
+
+       $ package 8960dt initrd.gz --cmdline="console=ttyMSM0,115200,n8"
+       Packaged /usr/src/linux/b/my-branch/boot.img
+
+
+    The boot.img will be placed one level above the kernel directory
+
+        $ ls ../
+        boot.img initrds kernel kobj
+
+6. Boot the kernel
+
+        $ fastboot boot /usr/src/linux/b/my-branch/boot.img
+
+Footnotes
+---------
+[1] http://git.kernel.org/?p=git/git.git;a=blob_plain;f=contrib/workdir/git-new-workdir
