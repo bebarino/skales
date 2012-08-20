@@ -15,6 +15,11 @@
  * prepend this code.
  */
 
+	/* Figure out what the broken mem tag would be */
+	mov	r8, pc
+	and	r8, r8, #0xf8000000
+	add	r8, r8, #0x00200000
+
 	/* R2 is where the atags are passed.  r5 on are scratch. */
 	mov	r5, r2
 	ldr	r7, .tag_mem
@@ -31,7 +36,6 @@
 
 	/* Is this memory base what we want? */
 	ldr	r6, [r5, #12]
-	ldr	r8, .oddbase
 	cmp	r6, r8
 
 	subeq	r6, r6, #0x200000
@@ -48,8 +52,5 @@
 
 .tag_mem:
 	.word	0x54410002
-.oddbase:
-	.word	0x80200000
-	/* .word	FIXUP_ATAG_ADDRESS */
 
 .done:
