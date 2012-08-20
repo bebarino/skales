@@ -42,6 +42,12 @@ g1 | 7201 | 7201a)
 	cmdline="console=hvc0"
 	base=0x40200000
 	;;
+8660dt)
+	cmdline="console=ttyMSM0,115200,n8"
+	base=0x40800000
+	needs_fixup=t
+	dtb=msm8660-surf.dtb
+	;;
 8960)
 	cmdline="console=hvc0"
 	base=0x80200000
