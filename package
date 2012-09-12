@@ -1,7 +1,11 @@
 #!/bin/sh
 
-prog=$(basename $0)
+prog=$(basename "$0")
 USAGE="$prog <arch> [initrd]"
+
+exe=$(readlink -f "$0")
+META_ROOT=$(dirname "$exe")
+META_ROOT=$(cd "$META_ROOT" && pwd)
 
 die() {
 	printf >&2 "%s\n" "$@"
