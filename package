@@ -141,7 +141,7 @@ then
 	image=../kobj/dImage || die "Can't combine zImage and dtb"
 fi
 
-mkbootimg --kernel ../kobj/$image \
+"$META_ROOT/mkbootimg" --kernel ../kobj/$image \
 	--ramdisk ../initrds/$initrd \
 	--cmdline "$cmdline" \
 	--base $base \
