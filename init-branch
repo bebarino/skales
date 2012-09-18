@@ -2,7 +2,10 @@
 #
 # Create a new working directory in the current directory
 
-prog=$(basename $0)
+prog=$(basename "$0")
+exe=$(readlink -f "$0")
+META_ROOT=$(dirname "$exe")
+META_ROOT=$(cd "$META_ROOT" && pwd)
 
 die() {
 	echo >&2 "$@"
@@ -28,4 +31,4 @@ mkdir $base/kobj &&
 test -f "$defconfig" &&
 cp $defconfig kobj/.config
 
-ln -s $(readlink -f $META_ROOT/initrds) initrds
+ln -s "$(readlink -f $META_ROOT/initrds)" initrds
