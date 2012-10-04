@@ -30,5 +30,3 @@ mkdir $base/kobj &&
 # Copy optional defconfig to the kobj directory
 test -f "$defconfig" &&
 cp $defconfig kobj/.config
-
-ln -s "$(readlink -f $META_ROOT/initrds)" initrds
