@@ -18,13 +18,13 @@ die() {
 }
 
 check_initrd() {
-	if ! test -f "../initrds/$initrd"
+	if ! test -f "$META_ROOT/initrds/$initrd"
 	then
 		echo >&2 "fatal: missing initrd '$initrd'"
 		echo >&2 "Available initrds:"
-		for x in ../initrds/*
+		for x in $META_ROOT/initrds/*
 		do
-			printf >&2 "  %s\n" "${x#../initrds/}"
+			printf >&2 "  %s\n" $(basename "$x")
 		done
 		exit 1
 	fi
@@ -147,7 +147,7 @@ then
 fi
 
 "$META_ROOT/mkbootimg" --kernel ../kobj/$image \
-	--ramdisk ../initrds/$initrd \
+	--ramdisk $META_ROOT/initrds/$initrd \
 	--cmdline "$cmdline" \
 	--base $base \
 	--pagesize $pagesize \
