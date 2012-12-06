@@ -46,8 +46,7 @@ and some directories.
  'package' - Creates a boot.img with the correct parameters for a particular
              machine
 
- 'source-me' - Environment setup script to put these scripts into the path and
-               set up the requisite environment variables
+ 'source-me' - Environment setup script to put these scripts into the $PATH.
 
 Getting Started
 ---------------
