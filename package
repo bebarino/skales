@@ -123,8 +123,13 @@ initrd="${initrd:-initrd.gz}"
 test -f ../kobj/$image || die "Can't find $image. Build a kernel?"
 if test -n "$dtb"
 then
-	dtb="arch/arm/boot/$dtb"
-	test -f ../kobj/$dtb || die "Can't find $dtb. Build a device tree blob?"
+	# Older kernels have it in different places
+	dbf="arch/arm/boot/dts/$dtb" &&
+	test -f ../kobj/$dbf ||
+	dbf="arch/arm/boot/$dtb" &&
+	test -f ../kobj/$dbf ||
+	die "Can't find '$dtb'. Build a device tree blob?"
+	dtb="$dbf"
 fi
 check_initrd
 
