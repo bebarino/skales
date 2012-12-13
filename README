@@ -51,6 +51,9 @@ and some directories.
 Getting Started
 ---------------
 
+NOTE: This workflow assumes you have git-new-workdir in your path.
+      git-new-workdir can be downloaded here[1].
+
 A typical workflow would be as follows:
 
  1. Source the source-me script
