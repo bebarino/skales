@@ -12,19 +12,10 @@ your $PATH.
 Background
 ----------
 
-This collection of scripts that can be used as a 'meta' branch within your
-kernel.git or as a standalone repo that you stick in your $PATH. It is
-distributed as a standalone git repo so that you can choose your own workflow.
-The workflow below assumes the 'meta' branch workflow.
+Cloning skales should give you a collection of scripts and some
+directories:
 
- kernel.git $ git remote add skales skales.git
- kernel.git $ git fetch skales
- kernel.git $ git checkout -t skales/master -b meta
-
-Checking out the meta branch should present you with a collection of scripts
-and some directories.
-
- kernel.git $ ls
+ skales $ ls
  README atag-fix init-branch initrds
  make-arm mkbootimg package source-me
 
@@ -52,20 +43,54 @@ and some directories.
 Getting Started
 ---------------
 
-NOTE: This workflow assumes you have git-new-workdir in your path.
-      git-new-workdir can be downloaded here[1].
+A simple workflow:
 
-A typical workflow would be as follows:
+ 1. Clone skales
 
- 1. Source the source-me script
+        $ git clone skales.git
 
-        $ . source-me
+ 1.1  Add skales to your path
 
- 1.1 Choose a cross-compiler
+        $ source source-me
 
-        $ export CROSS_COMPILE=/path/to/my/compiler/arm-eabi-
+ 1.2. Copy the config.sh.example to config.sh
 
- 2. Initialize a new working branch (b/ is not necessary but default ignored)
+        $ cp config.sh.example config.sh
+
+ 1.3. Edit the config file to set options like cross-compiler,
+      defconfig, etc.
+
+ 2. Checkout or clone a kernel
+
+        $ git clone git://git.kernel.org/... kernel
+
+ 3. Build the kernel
+
+        $ cd kernel
+        $ make-arm -j 16   ...
+
+ 4. Package the kernel up into a boot.img
+
+        $ package 8960dt initrd.gz --cmdline="console=ttyMSM0,115200,n8"
+        Packaged /usr/src/linux/b/my-branch/boot.img
+
+    The boot.img will be placed one level above the kernel directory
+
+        $ ls ../
+        boot.img kernel kobj
+
+5. Boot the kernel
+
+        $ fastboot boot /usr/src/linux/b/my-branch/boot.img
+
+Skales also contains a script, called init-branch, which uses the
+git-new-workdir utility to help work with multiple git trees that
+share history[1].
+
+Most steps are similar to above, but the kernel can be managed with
+these steps:
+
+ 1. Initialize a new working branch (b/ is not necessary but default ignored)
     with an optional defconfig (in this example we'll use no defconfig)
 
         $ mkdir -p b/my-branch
@@ -78,29 +103,13 @@ A typical workflow would be as follows:
     to the branch that was specified (in this case my-branch). The 'kobj'
     directory contains any object files and build products.
 
- 3. Enter the kernel directory and configure your kernel
+ 2. Enter the kernel directory and configure your kernel
 
-	$ cd kernel
+        $ cd kernel
         $ make-arm menuconfig
         <configure things>
 
- 4. Build the kernel
-
-        $ make-arm -j
-
- 5. Package the kernel up into a boot.img
-
-        $ package 8960dt initrd.gz --cmdline="console=ttyMSM0,115200,n8"
-        Packaged /usr/src/linux/b/my-branch/boot.img
-
-    The boot.img will be placed one level above the kernel directory
-
-        $ ls ../
-        boot.img kernel kobj
-
-6. Boot the kernel
-
-        $ fastboot boot /usr/src/linux/b/my-branch/boot.img
+Continue at step 3 listed above in the simple workflow.
 
 Footnotes
 ---------
