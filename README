@@ -71,15 +71,15 @@ A typical workflow would be as follows:
         $ cd b/my-branch
         $ init-branch my-branch
         $ ls
-        initrds kernel kobj
+        kernel kobj
 
-    You'll notice that 'initrds' is a symlink to the initrds within the meta
-    branch. The 'kernel' directory contains the sources of the kernel tree
-    checked out to the branch that was specified (in this case my-branch). The
-    'kobj' directory contains any object files and build products.
+    The 'kernel' directory contains the sources of the kernel tree checked out
+    to the branch that was specified (in this case my-branch). The 'kobj'
+    directory contains any object files and build products.
 
  3. Enter the kernel directory and configure your kernel
 
+	$ cd kernel
         $ make-arm menuconfig
         <configure things>
 
@@ -96,7 +96,7 @@ A typical workflow would be as follows:
     The boot.img will be placed one level above the kernel directory
 
         $ ls ../
-        boot.img initrds kernel kobj
+        boot.img kernel kobj
 
 6. Boot the kernel
 
