@@ -18,7 +18,7 @@ die() {
 }
 
 check_initrd() {
-	if ! test -f "$META_ROOT/initrds/$initrd"
+	if ! test -e "$META_ROOT/initrds/$initrd"
 	then
 		echo >&2 "fatal: missing initrd '$initrd'"
 		echo >&2 "Available initrds:"
