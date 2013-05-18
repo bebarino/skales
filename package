@@ -67,6 +67,11 @@ g1 | 7201 | 7201a)
 	needs_fixup=t
 	dtb=msm8960-cdp.dtb
 	;;
+8974)
+	cmdline="console=hvc0"
+	base=0x00000000
+	dtb=msm8974.dtb
+	;;
 *)
 	die "Unknown architecture $1"
 	;;
