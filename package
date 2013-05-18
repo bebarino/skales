@@ -23,8 +23,9 @@ then
 fi
 
 image=zImage pagesize=2048 cmdline= base= initrd= needs_fixup= dtb=
+target="$1"
 
-case "$1" in
+case "$target" in
 g1 | 7201 | 7201a)
 	cmdline="console=ttyMSM2,115200,n8"
 	base=0x10000000
@@ -159,6 +160,7 @@ fi
 	--cmdline "$cmdline" \
 	--base $base \
 	--pagesize $pagesize \
-	--output ../boot.img &&
-echo "Packaged $(readlink -f ../boot.img)"
+	--output ../boot-$target.img &&
+echo "Packaged $(readlink -f ../boot-$target.img)" &&
+ln -s ../boot-$target.img ../boot.img
 )
