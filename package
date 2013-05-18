@@ -142,6 +142,8 @@ then
 
 	cat $fixup.bin ../kobj/$image > ../kobj/fImage &&
 	image=../kobj/fImage || die "Can't build fixup"
+else
+	image=../kobj/$image
 fi
 
 # append any blob to the image
