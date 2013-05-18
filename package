@@ -120,14 +120,17 @@ done
 image=arch/arm/boot/$image
 initrd="${initrd:-initrd.gz}"
 
-test -f ../kobj/$image || die "Can't find $image. Build a kernel?"
+(
+cd ../kobj &&
+
+test -f $image || die "Can't find $image. Build a kernel?"
 if test -n "$dtb"
 then
 	# Older kernels have it in different places
 	dbf="arch/arm/boot/dts/$dtb" &&
-	test -f ../kobj/$dbf ||
+	test -f $dbf ||
 	dbf="arch/arm/boot/$dtb" &&
-	test -f ../kobj/$dbf ||
+	test -f $dbf ||
 	die "Can't find '$dtb'. Build a device tree blob?"
 	dtb="$dbf"
 fi
@@ -140,23 +143,22 @@ then
 	${CROSS_COMPILE}gcc -c $fixup.S -o $fixup.o &&
 	${CROSS_COMPILE}objcopy -O binary $fixup.o $fixup.bin &&
 
-	cat $fixup.bin ../kobj/$image > ../kobj/fImage &&
-	image=../kobj/fImage || die "Can't build fixup"
-else
-	image=../kobj/$image
+	cat $fixup.bin $image > fImage &&
+	image=fImage || die "Can't build fixup"
 fi
 
 # append any blob to the image
 if test -n "$dtb"
 then
-	cat $image ../kobj/$dtb > ../kobj/dImage &&
-	image=../kobj/dImage || die "Can't combine zImage and dtb"
+	cat $image $dtb > dImage &&
+	image=dImage || die "Can't combine zImage and dtb"
 fi
 
-"$META_ROOT/mkbootimg" --kernel ../kobj/$image \
+"$META_ROOT/mkbootimg" --kernel $image \
 	--ramdisk $META_ROOT/initrds/$initrd \
 	--cmdline "$cmdline" \
 	--base $base \
 	--pagesize $pagesize \
 	--output ../boot.img &&
 echo "Packaged $(readlink -f ../boot.img)"
+)
