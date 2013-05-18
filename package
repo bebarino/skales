@@ -17,19 +17,6 @@ die() {
 	exit 1
 }
 
-check_initrd() {
-	if ! test -e "$META_ROOT/initrds/$initrd"
-	then
-		echo >&2 "fatal: missing initrd '$initrd'"
-		echo >&2 "Available initrds:"
-		for x in $META_ROOT/initrds/*
-		do
-			printf >&2 "  %s\n" $(basename "$x")
-		done
-		exit 1
-	fi
-}
-
 if test -z "$1"
 then
 	die "usage: $USAGE"
@@ -112,13 +99,27 @@ do
 		;;
 	*)
 		initrd="$1"
+		if ! test -e "$initrd"
+		then
+			initrd="$META_ROOT/initrds/$initrd"
+			if ! test -e "$initrd"
+			then
+				echo >&2 "fatal: can't find initrd"
+				echo >&2 "Available initrds:"
+				for x in $META_ROOT/initrds/*
+				do
+					printf >&2 "  %s\n" $(basename "$x")
+				done
+				exit 1
+			fi
+		fi
 		;;
 	esac
 	shift
 done
 
 image=arch/arm/boot/$image
-initrd="${initrd:-initrd.gz}"
+initrd=${initrd:-/dev/null}
 
 (
 cd ../kobj &&
@@ -134,7 +135,6 @@ then
 	die "Can't find '$dtb'. Build a device tree blob?"
 	dtb="$dbf"
 fi
-check_initrd
 
 # Compile the atag fixup if necessary
 if test -n "$needs_fixup"
@@ -155,7 +155,7 @@ then
 fi
 
 "$META_ROOT/mkbootimg" --kernel $image \
-	--ramdisk $META_ROOT/initrds/$initrd \
+	--ramdisk $initrd \
 	--cmdline "$cmdline" \
 	--base $base \
 	--pagesize $pagesize \
