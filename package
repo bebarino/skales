@@ -167,5 +167,5 @@ fi
 	--pagesize $pagesize \
 	--output ../boot-$target.img &&
 echo "Packaged $(readlink -f ../boot-$target.img)" &&
-ln -s ../boot-$target.img ../boot.img
+ln -fs ../boot-$target.img ../boot.img
 )
