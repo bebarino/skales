@@ -1,7 +1,12 @@
 #!/bin/sh
 
 prog=$(basename "$0")
-USAGE="$prog <arch> [initrd]"
+USAGE="$prog <arch> [initrd] [options]
+
+    --base=<NUM>         specify the address the bootloader loads the kernel to
+    --cmdline=<cmdline>  override the default command line
+    --modules            include modules in ramdisk
+"
 
 exe=$(readlink -f "$0")
 META_ROOT=$(dirname "$exe")
@@ -17,9 +22,18 @@ die() {
 	exit 1
 }
 
+usage() {
+	die "usage: $USAGE"
+}
+
+error() {
+	printf >&2 "%s\n" "$@"
+	usage
+}
+
 if test -z "$1"
 then
-	die "usage: $USAGE"
+	usage
 fi
 
 image=zImage pagesize=2048 cmdline= base= initrd= needs_fixup= dtb= modules=
@@ -60,6 +74,9 @@ g1 | 7201 | 7201a)
 	base=0x00000000
 	dtb=msm8974.dtb
 	;;
+-h|--help)
+	usage
+	;;
 *)
 	die "Unknown architecture $1"
 	;;
@@ -70,23 +87,12 @@ shift
 while test $# != 0
 do
 	case "$1" in
-	--kernel|--kernel=*)
-		case "$#,$1" in
-		*,*=*)
-			kernel=`expr "z$1" : 'z-[^=]*=\(.*\)'` ;;
-		1,*)
-			die "bad" ;;
-		*)
-			kernel="$2"
-			shift ;;
-		esac
-		;;
 	--cmdline|--cmdline=*)
 		case "$#,$1" in
 		*,*=*)
 			cmdline=`expr "z$1" : 'z-[^=]*=\(.*\)'` ;;
 		1,*)
-			die "bad" ;;
+			error "'$1' option missing value" ;;
 		*)
 			cmdline="$2"
 			shift ;;
@@ -97,7 +103,7 @@ do
 		*,*=*)
 			base=`expr "z$1" : 'z-[^=]*=\(.*\)'` ;;
 		1,*)
-			die "bad" ;;
+			error "'$1' option missing value" ;;
 		*)
 			base="$2"
 			shift ;;
