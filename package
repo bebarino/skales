@@ -22,7 +22,7 @@ then
 	die "usage: $USAGE"
 fi
 
-image=zImage pagesize=2048 cmdline= base= initrd= needs_fixup= dtb=
+image=zImage pagesize=2048 cmdline= base= initrd= needs_fixup= dtb= modules=
 target="$1"
 
 case "$target" in
@@ -103,6 +103,9 @@ do
 			shift ;;
 		esac
 		;;
+	--modules)
+		modules=t
+		;;
 	*)
 		initrd="$1"
 		if ! test -e "$initrd"
@@ -124,11 +127,27 @@ do
 	shift
 done
 
-image=arch/arm/boot/$image
-initrd=${initrd:-/dev/null}
-
 (
 cd ../kobj &&
+
+if test -n "$modules"
+then
+	if test -z "$initrd"
+	then
+		die "Need an initrd to append modules to"
+	fi
+
+	rm -rf ../modules/ &&
+	INSTALL_MOD_PATH=../modules make-arm modules_install > /dev/null 2>&1 &&
+	(
+		cd ../modules/ && find . | cpio --quiet -o -H newc
+	) | gzip -n -9 > initrd-modules.gz &&
+	cat $initrd initrd-modules.gz > initrd.gz
+	initrd=initrd.gz
+fi
+
+image=arch/arm/boot/$image
+initrd=${initrd:-/dev/null}
 
 test -f $image || die "Can't find $image. Build a kernel?"
 if test -n "$dtb"
