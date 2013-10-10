@@ -44,6 +44,10 @@ if test -f "$META_ROOT/config.sh"
 then
 	source "$META_ROOT/config.sh"
 fi
+if test -f .skales/config
+then
+	source .skales/config
+fi
 
 die() {
 	printf >&2 "%s\n" "$@"

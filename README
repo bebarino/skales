@@ -58,11 +58,20 @@ A simple workflow:
         $ cp config.sh.example config.sh
 
  1.3. Edit the config file to set options like cross-compiler,
-      defconfig, etc.
+      defconfig, etc. Note that these options will be global and
+      can be overriden by modifying the per-kernel options
+      described in section 2.1.
 
  2. Checkout or clone a kernel
 
         $ git clone git://git.kernel.org/... kernel
+
+ 2.1. Configure per-kernel options to override the global options
+      in .skales/config for this kernel source tree.
+
+        $ mkdir .skales
+        $ cp /skales/config.sh.example .skales/config
+        $ <edit options>
 
  3. Build the kernel
 
