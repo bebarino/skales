@@ -48,6 +48,9 @@ if test -f .skales/config
 then
 	source .skales/config
 fi
+KOBJ="${KOBJ:-../kobj}"
+BOOTIMG_DIR="${BOOTIMG_DIR:-../}"
+BOOTIMG_DIR="$(readlink -f $BOOTIMG_DIR)"
 
 die() {
 	printf >&2 "%s\n" "$@"
@@ -159,6 +162,8 @@ do
 				done
 				exit 1
 			fi
+		else
+			initrd="$(readlink -f $initrd)"
 		fi
 		;;
 	esac
@@ -166,7 +171,7 @@ do
 done
 
 (
-cd ../kobj &&
+cd $KOBJ &&
 
 if test -n "$modules"
 then
@@ -175,10 +180,10 @@ then
 		die "Need an initrd to append modules to"
 	fi
 
-	rm -rf ../modules/ &&
-	INSTALL_MOD_PATH=../modules make-arm modules_install > /dev/null 2>&1 &&
+	rm -rf modules &&
+	INSTALL_MOD_PATH=modules make modules_install > /dev/null 2>&1 &&
 	(
-		cd ../modules/ && find . | cpio --quiet -o -H newc
+		cd modules && find . | cpio --quiet -o -H newc
 	) | gzip -n -9 > initrd-modules.gz &&
 	cat $initrd initrd-modules.gz > initrd.gz
 	initrd=initrd.gz
@@ -222,7 +227,14 @@ fi
 	--cmdline "$cmdline" \
 	--base $base \
 	--pagesize $pagesize \
-	--output ../boot-$target.img &&
-echo "Packaged $(readlink -f ../boot-$target.img)" &&
-ln -fs boot-$target.img ../boot.img
+	--output $BOOTIMG_DIR/boot-$target.img &&
+echo "Packaged $(readlink -f $BOOTIMG_DIR/boot-$target.img)" &&
+ln -fs boot-$target.img $BOOTIMG_DIR/boot.img
+
+# Cleanup for people with kobj=working_dir
+rm -rf fImage dImage modules initrd-modules.gz
+if test -n "$modules"
+then
+	rm -rf $initrd
+fi
 )

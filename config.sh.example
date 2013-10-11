@@ -35,3 +35,9 @@
 # build, and place the resulting savedefconfig back into the user's
 # tree.
 #defconfig=msm_defconfig
+
+# Where to put kernel build objects
+#KOBJ=../kobj
+
+# Where to put boot images
+#BOOTIMG_DIR=../
