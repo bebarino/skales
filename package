@@ -92,7 +92,7 @@ g1 | 7201 | 7201a)
 	cmdline="console=ttyMSM0,115200,n8"
 	base=0x40800000
 	needs_fixup=t
-	dtb=msm8660-surf.dtb
+	dtb=qcom-msm8660-surf.dtb
 	;;
 8960)
 	cmdline="console=hvc0"
@@ -102,12 +102,18 @@ g1 | 7201 | 7201a)
 	cmdline="console=ttyMSM0,115200,n8"
 	base=0x86000000 # Put it high to avoid relocation
 	needs_fixup=t
-	dtb=msm8960-cdp.dtb
+	dtb=qcom-msm8960-cdp.dtb
+	;;
+ifc6410)
+	cmdline="console=ttyMSM0,115200,n8"
+	base=0x86000000 # Put it high to avoid relocation
+	needs_fixup=t
+	dtb=qcom-apq8064-ifc6410.dtb
 	;;
 8974)
-	cmdline="console=hvc0"
+	cmdline="console=ttyMSM0,115200,n8"
 	base=0x00000000
-	dtb=msm8974.dtb
+	dtb=qcom-apq8074-dragonboard.dtb
 	;;
 -h|--help)
 	usage
