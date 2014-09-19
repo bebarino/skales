@@ -78,7 +78,7 @@ target="$1"
 
 case "$target" in
 g1 | 7201 | 7201a)
-	cmdline="console=ttyMSM2,115200,n8"
+	cmdline="console=ttyMSM2,115200,n8 mem=101M"
 	base=0x10000000
 	;;
 7x30 | 7630 | 7230)
