@@ -28,4 +28,19 @@
 #  IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-fastboot boot ../boot.img
+exe=$(readlink -f "$0")
+META_ROOT=$(dirname "$exe")
+META_ROOT=$(cd "$META_ROOT" && pwd)
+
+if test -f "$META_ROOT/config.sh"
+then
+	source "$META_ROOT/config.sh"
+fi
+if test -f .skales/config
+then
+	source .skales/config
+fi
+BOOTIMG_DIR="${BOOTIMG_DIR:-../}"
+BOOTIMG_DIR="$(readlink -f $BOOTIMG_DIR)"
+
+fastboot boot "$BOOTIMG_DIR/boot.img"
