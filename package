@@ -34,6 +34,7 @@ USAGE="$prog <arch> [initrd] [options]
     --base=<NUM>         specify the address the bootloader loads the kernel to
     --cmdline=<cmdline>  override the default command line
     --modules            include modules in ramdisk
+    --directory=<dir>    include directory in ramdisk
 "
 
 exe=$(readlink -f "$0")
@@ -72,6 +73,7 @@ then
 fi
 
 image=zImage pagesize=2048 cmdline= base= initrd= needs_fixup= dtb= modules=
+extra_dir=
 target="$1"
 
 case "$target" in
@@ -153,6 +155,17 @@ do
 	--modules)
 		modules=t
 		;;
+	--directory|--directory=*)
+		case "$#,$1" in
+		*,*=*)
+			extra_dir=`expr "z$1" : 'z-[^=]*=\(.*\)'` ;;
+		1,*)
+			error "'$1' option missing value" ;;
+		*)
+			extra_dir="$2"
+			shift ;;
+		esac
+		;;
 	*)
 		initrd="$1"
 		if ! test -e "$initrd"
@@ -192,6 +205,22 @@ then
 		cd modules && find . | cpio --quiet -o -H newc
 	) | gzip -n -9 > initrd-modules.gz &&
 	cat $initrd initrd-modules.gz > initrd.gz
+	initrd=initrd.gz
+fi
+
+if test -n "$extra_dir"
+then
+	if test -z "$initrd"
+	then
+		die "Need an initrd to add directory to"
+	fi
+
+	(
+		cd - >/dev/null 2>&1 &&
+		cd $extra_dir && find . | cpio --quiet -o -H newc
+	) | gzip -n -9 > initrd-extra.gz &&
+	cat $initrd initrd-extra.gz > initrd2.gz &&
+	mv initrd2.gz initrd.gz
 	initrd=initrd.gz
 fi
 
@@ -238,8 +267,8 @@ echo "Packaged $(readlink -f $BOOTIMG_DIR/boot-$target.img)" &&
 ln -fs boot-$target.img $BOOTIMG_DIR/boot.img
 
 # Cleanup for people with kobj=working_dir
-rm -rf fImage dImage modules initrd-modules.gz
-if test -n "$modules"
+rm -rf fImage dImage modules initrd-modules.gz initrd-extra.gz
+if test -n "$modules" -o -n "$extra_dir"
 then
 	rm -rf $initrd
 fi
