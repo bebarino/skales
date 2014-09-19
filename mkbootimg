@@ -58,6 +58,8 @@ if __name__ == "__main__":
 	# New options
 	parser.add_option("--ramdisk_base", type="int", dest="ramdisk_base",
 			  default=-1, help="Start address of ramdisk image")
+	parser.add_option("--dt", dest="devicetree", metavar="FILE",
+			  help="Input device tree image")
 
 	(options, args) = parser.parse_args()
 
@@ -84,28 +86,52 @@ if __name__ == "__main__":
 		output = open(options.output, 'wb')
 	except IOError:
 		exit("Can't open %s" % options.output)
+	if options.devicetree:
+		try:
+			devicetree = open(options.devicetree, 'rb')
+		except IOError:
+			exit("Can't open %s" % options.devicetree)
 
 	pagesize = options.pagesize
 	tags = options.base + 0x100
 	ramdisk_base = options.ramdisk_base if options.ramdisk_base != -1 else options.base + 0x2000000
 
+	kernel_size = os.fstat(kernel.fileno()).st_size
+	dtb_size = 0
+	if options.devicetree:
+		of_dt_header = 0xd00dfeed
+		magic = devicetree.read(4)
+		devicetree.seek(0)
+		if int(magic.encode('hex'),16) == of_dt_header:
+			append_dtb = True
+			kernel_size += os.fstat(devicetree.fileno()).st_size
+		elif magic == 'QCDT':
+			append_dtb = False
+			dtb_size = os.fstat(devicetree.fileno()).st_size
+		else:
+			exit("dtb: %s is of unknown format" % options.devicetree)
+
 	hdr_format = "<8sIIIIIIII2I16s512s8I"
 	output.write(pack(hdr_format,
 			  "ANDROID!",
-			  os.fstat(kernel.fileno()).st_size,
+			  kernel_size,
 			  options.base + 0x8000,
 			  os.fstat(ramdisk.fileno()).st_size,
 			  ramdisk_base,
 			  0, 0,
 			  tags,
 			  options.pagesize,
-			  0, 0,
+			  dtb_size, 0,
 			  "",
 			  options.cmdline,
 			  123456, 123456, 123456, 123456, 123456, 123456,
 			  0, 0))
 	write_padding(output, pagesize)
 	output.write(kernel.read())
+	if options.devicetree and append_dtb:
+		output.write(devicetree.read())
 	write_padding(output, pagesize)
 	output.write(ramdisk.read())
 	write_padding(output, pagesize)
+	if options.devicetree and not append_dtb:
+		output.write(devicetree.read())
