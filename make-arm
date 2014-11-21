@@ -37,10 +37,14 @@ if test -f "$META_ROOT/config.sh"
 then
 	source "$META_ROOT/config.sh"
 fi
+
 if test -f .skales/config
 then
 	source .skales/config
 fi
+
+export CROSS_COMPILE=$CROSS_COMPILE
+
 KOBJ="${KOBJ:-../kobj}"
 
 O_STR=
