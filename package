@@ -122,6 +122,11 @@ ifc6410)
 	base=0x00000000
 	dtb=qcom-apq8074-dragonboard.dtb
 	;;
+8084-mtp)
+	cmdline="console=ttyMSM0,115200,n8"
+	base=0x00000000
+	dtb=qcom-apq8084-mtp.dtb
+	;;
 -h|--help)
 	usage
 	;;
