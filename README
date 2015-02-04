@@ -9,6 +9,16 @@ Therefore there are separate scripts to setup, compile, package the
 kernel, etc. and they're all assembled into a 'toolbox' that goes in
 your $PATH.
 
+Prerequisites
+-------------
+
+To use dtbTool you should have the 'fdtget' program. This is commonly
+distributed as part of the device tree compiler package.
+
+ device-tree-compiler (debian)
+ dtc (redhat)
+ sys-apps/dtc (gentoo)
+
 Background
 ----------
 
@@ -16,12 +26,14 @@ Cloning skales should give you a collection of scripts and some
 directories:
 
  skales $ ls
- README atag-fix init-branch initrds
+ README atag-fix dtbTool init-branch initrds
  make-arm mkbootimg package source-me
 
  'README' - This file
 
  'atag-fix' - Contains the atag fixup hack for broken bootloaders
+
+ 'dtbTool' - Clone of dtbTool from Android (creates a QCDT image)
 
  'init-branch' - Command to initialize a new working tree based off a
                  particular branch. This relies on the git-new-workdir script
