@@ -73,59 +73,75 @@ then
 fi
 
 image=zImage pagesize=2048 cmdline= base= initrd= needs_fixup= dtb= modules=
-extra_dir=
+extra_dir= dtbs= dtarg= arch=
 target="$1"
 
 case "$target" in
 g1 | 7201 | 7201a)
 	cmdline="console=ttyMSM2,115200,n8 mem=101M"
 	base=0x10000000
+	arch=arm
 	;;
 7201dt)
 	cmdline="console=ttyMSM2,115200,n8 mem=101M"
 	base=0x10000000
 	dtb=qcom-msm7201a-surf.dtb
+	arch=arm
 	;;
 7x30 | 7630 | 7230)
 	cmdline="console=ttyMSM1,115200,n8"
 	base=0x200000
 	pagesize=4096
+	arch=arm
 	;;
 8660 | 8x60)
 	cmdline="console=hvc0"
 	base=0x40200000
+	arch=arm
 	;;
 8660dt)
 	cmdline="console=ttyMSM0,115200,n8"
 	base=0x40800000
 	needs_fixup=t
 	dtb=qcom-msm8660-surf.dtb
+	arch=arm
 	;;
 8960)
 	cmdline="console=hvc0"
 	base=0x80200000
+	arch=arm
 	;;
 8960dt)
 	cmdline="console=ttyMSM0,115200,n8"
 	base=0x86000000 # Put it high to avoid relocation
 	needs_fixup=t
 	dtb=qcom-msm8960-cdp.dtb
+	arch=arm
 	;;
 ifc6410)
 	cmdline="console=ttyMSM0,115200,n8"
 	base=0x86000000 # Put it high to avoid relocation
 	needs_fixup=t
 	dtb=qcom-apq8064-ifc6410.dtb
+	arch=arm
 	;;
 8974)
 	cmdline="console=ttyMSM0,115200,n8"
 	base=0x00000000
 	dtb=qcom-apq8074-dragonboard.dtb
+	arch=arm
 	;;
 8084-mtp)
 	cmdline="console=ttyMSM0,115200,n8"
 	base=0x00000000
 	dtb=qcom-apq8084-mtp.dtb
+	arch=arm
+	;;
+8916)
+	cmdline="console=ttyMSM0,115200,n8"
+	base=0x00000000
+	dtbs=qcom/
+	arch=arm64
 	;;
 -h|--help)
 	usage
@@ -234,7 +250,13 @@ then
 	initrd=initrd.gz
 fi
 
-image=arch/arm/boot/$image
+if test "$arch" = "arm"
+then
+	image=arch/arm/boot/$image
+else
+	image=arch/arm64/boot/Image
+fi
+
 initrd=${initrd:-/dev/null}
 
 test -f $image || die "Can't find $image. Build a kernel?"
@@ -247,6 +269,7 @@ then
 	test -f $dbf ||
 	die "Can't find '$dtb'. Build a device tree blob?"
 	dtb="$dbf"
+	dtarg="--dt $dtb"
 fi
 
 # Compile the atag fixup if necessary
@@ -260,11 +283,13 @@ then
 	image=fImage || die "Can't build fixup"
 fi
 
-# append any blob to the image
-if test -n "$dtb"
+# build dtbs to append
+if test -n "$dtbs"
 then
-	cat $image $dtb > dImage &&
-	image=dImage || die "Can't combine zImage and dtb"
+	rm -rf dtbs &&
+	INSTALL_DTBS_PATH=dtbs make ARCH=$arch dtbs_install > /dev/null 2>&1 &&
+	"$META_ROOT/dtbTool" --page-size $pagesize -o .dtblob dtbs/$dtbs > /dev/null 2>&1 &&
+	dtarg="--dt .dtblob" || die "Can't build dtbs"
 fi
 
 "$META_ROOT/mkbootimg" --kernel $image \
@@ -272,12 +297,13 @@ fi
 	--cmdline "$cmdline" \
 	--base $base \
 	--pagesize $pagesize \
-	--output $BOOTIMG_DIR/boot-$target.img &&
+	--output $BOOTIMG_DIR/boot-$target.img \
+	$dtarg &&
 echo "Packaged $(readlink -f $BOOTIMG_DIR/boot-$target.img)" &&
 ln -fs boot-$target.img $BOOTIMG_DIR/boot.img
 
 # Cleanup for people with kobj=working_dir
-rm -rf fImage dImage modules initrd-modules.gz initrd-extra.gz
+rm -rf fImage modules initrd-modules.gz initrd-extra.gz dtbs .dtblob
 if test -n "$modules" -o -n "$extra_dir"
 then
 	rm -rf $initrd
