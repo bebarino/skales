@@ -77,77 +77,16 @@ extra_dir= dtbs= dtarg= arch=
 target="$1"
 
 case "$target" in
-g1 | 7201 | 7201a)
-	cmdline="console=ttyMSM2,115200,n8 mem=101M"
-	base=0x10000000
-	arch=arm
-	;;
-7201dt)
-	cmdline="console=ttyMSM2,115200,n8 mem=101M"
-	base=0x10000000
-	dtb=qcom-msm7201a-surf.dtb
-	arch=arm
-	;;
-7x30 | 7630 | 7230)
-	cmdline="console=ttyMSM1,115200,n8"
-	base=0x200000
-	pagesize=4096
-	arch=arm
-	;;
-8660 | 8x60)
-	cmdline="console=hvc0"
-	base=0x40200000
-	arch=arm
-	;;
-8660dt)
-	cmdline="console=ttyMSM0,115200,n8"
-	base=0x40800000
-	needs_fixup=t
-	dtb=qcom-msm8660-surf.dtb
-	arch=arm
-	;;
-8960)
-	cmdline="console=hvc0"
-	base=0x80200000
-	arch=arm
-	;;
-8960dt)
-	cmdline="console=ttyMSM0,115200,n8"
-	base=0x86000000 # Put it high to avoid relocation
-	needs_fixup=t
-	dtb=qcom-msm8960-cdp.dtb
-	arch=arm
-	;;
-ifc6410)
-	cmdline="console=ttyMSM0,115200,n8"
-	base=0x86000000 # Put it high to avoid relocation
-	needs_fixup=t
-	dtb=qcom-apq8064-ifc6410.dtb
-	arch=arm
-	;;
-8974)
-	cmdline="console=ttyMSM0,115200,n8"
-	base=0x00000000
-	dtb=qcom-apq8074-dragonboard.dtb
-	arch=arm
-	;;
-8084-mtp)
-	cmdline="console=ttyMSM0,115200,n8"
-	base=0x00000000
-	dtb=qcom-apq8084-mtp.dtb
-	arch=arm
-	;;
-8916)
-	cmdline="console=ttyMSM0,115200,n8"
-	base=0x00000000
-	dtbs=qcom/
-	arch=arm64
-	;;
 -h|--help)
 	usage
 	;;
 *)
-	die "Unknown architecture $1"
+	if test -f "$META_ROOT/boards/$1"
+	then
+		source "$META_ROOT/boards/$1"
+	else
+		die "Unknown architecture $1"
+	fi
 	;;
 esac
 

@@ -26,12 +26,14 @@ Cloning skales should give you a collection of scripts and some
 directories:
 
  skales $ ls
- README atag-fix dtbTool init-branch initrds
- make-arm mkbootimg package source-me
+ README atag-fix boards dtbTool init-branch
+ initrds make-arm mkbootimg package source-me
 
  'README' - This file
 
  'atag-fix' - Contains the atag fixup hack for broken bootloaders
+
+ 'boards' - Directory of board configuration files
 
  'dtbTool' - Clone of dtbTool from Android (creates a QCDT image)
 
