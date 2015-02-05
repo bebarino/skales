@@ -36,7 +36,9 @@ from optparse import OptionParser
 
 def write_padding(f, pagesize):
 	count = pagesize - (f.tell() % pagesize)
-	output.write("".join(['\x00' for x in xrange(count)]))
+	# Write padding as long as we aren't already aligned to a page
+	if count != pagesize:
+		output.write("".join(['\x00' for x in xrange(count)]))
 
 if __name__ == "__main__":
 	usage = ("""%prog [options]""")
