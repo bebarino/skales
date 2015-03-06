@@ -73,7 +73,7 @@ then
 fi
 
 image=zImage pagesize=2048 cmdline= base= initrd= needs_fixup= dtb= modules=
-extra_dir= dtbs= dtarg= arch=
+extra_dir= dtbs= dtarg= arch= uImage=
 target="$1"
 
 case "$target" in
@@ -231,15 +231,24 @@ then
 	dtarg="--dt .dtblob" || die "Can't build dtbs"
 fi
 
-"$META_ROOT/mkbootimg" --kernel $image \
-	--ramdisk $initrd \
-	--cmdline "$cmdline" \
-	--base $base \
-	--pagesize $pagesize \
-	--output $BOOTIMG_DIR/boot-$target.img \
-	$dtarg &&
-echo "Packaged $(readlink -f $BOOTIMG_DIR/boot-$target.img)" &&
-ln -fs boot-$target.img $BOOTIMG_DIR/boot.img
+if test -n "$uImage"
+then
+	mkimage -A $arch -O linux -C none -T kernel \
+		-a $base -e $base -n "$target kernel" \
+		-d "$image" $BOOTIMG_DIR/uImage-$target > /dev/null 2>&1 &&
+	echo "Packaged $(readlink -f $BOOTIMG_DIR/uImage-$target)" &&
+	ln -fs uImage-$target $BOOTIMG_DIR/uImage
+else
+	"$META_ROOT/mkbootimg" --kernel $image \
+		--ramdisk $initrd \
+		--cmdline "$cmdline" \
+		--base $base \
+		--pagesize $pagesize \
+		--output $BOOTIMG_DIR/boot-$target.img \
+		$dtarg &&
+	echo "Packaged $(readlink -f $BOOTIMG_DIR/boot-$target.img)" &&
+	ln -fs boot-$target.img $BOOTIMG_DIR/boot.img
+fi
 
 # Cleanup for people with kobj=working_dir
 rm -rf fImage modules initrd-modules.gz initrd-extra.gz dtbs .dtblob
