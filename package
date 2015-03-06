@@ -35,6 +35,7 @@ USAGE="$prog <arch> [initrd] [options]
     --cmdline=<cmdline>  override the default command line
     --modules            include modules in ramdisk
     --directory=<dir>    include directory in ramdisk
+    --dirty              skip cleanup
 "
 
 exe=$(readlink -f "$0")
@@ -73,7 +74,7 @@ then
 fi
 
 image=zImage pagesize=2048 cmdline= base= initrd= needs_fixup= dtb= modules=
-extra_dir= dtbs= dtarg= arch= uImage=
+extra_dir= dtbs= dtarg= arch= uImage= dirty=
 target="$1"
 
 case "$target" in
@@ -130,6 +131,9 @@ do
 			extra_dir="$2"
 			shift ;;
 		esac
+		;;
+	--dirty)
+		dirty=t
 		;;
 	*)
 		initrd="$1"
@@ -251,9 +255,12 @@ else
 fi
 
 # Cleanup for people with kobj=working_dir
-rm -rf fImage modules initrd-modules.gz initrd-extra.gz dtbs .dtblob
-if test -n "$modules" -o -n "$extra_dir"
+if test -z "$dirty"
 then
-	rm -rf $initrd
+	rm -rf fImage modules initrd-modules.gz initrd-extra.gz dtbs .dtblob
+	if test -n "$modules" -o -n "$extra_dir"
+	then
+		rm -rf $initrd
+	fi
 fi
 )
