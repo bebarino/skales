@@ -145,8 +145,8 @@ def generate_records(f, dtc, pagesize):
 
 	records = []
 	if version == 1:
-		for (plat_id, variant_id, subtype_id) in msm_id:
-			records += [DTRecord(plat_id, variant_id, subtype_id, 0,
+		for (plat_id, variant_id, soc_rev) in msm_id:
+			records += [DTRecord(plat_id, variant_id, 0, soc_rev,
 					    0, 0, 0, 0, 0, size, f, version)]
 	elif version == 2:
 		for (plat_id, soc_rev) in msm_id:
