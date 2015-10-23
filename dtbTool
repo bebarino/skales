@@ -35,7 +35,154 @@ from struct import pack
 import os
 import sys
 import subprocess
+import re
 from optparse import OptionParser
+
+soc_ids = {
+		'msm8660'        : 71,
+		'msm8960'        : 87,
+		'apq8064'        : 109,
+		'msm8660a'       : 122,
+		'msm8260a'       : 123,
+		'apq8060a'       : 124,
+		'msm8974'        : 126,
+		'msm8960ab'      : 138,
+		'apq8060ab'      : 139,
+		'msm8260ab'      : 140,
+		'msm8660ab'      : 141,
+		'apq8064_prime'  : 153,
+		'apq8084'        : 178,
+		'apq8074'        : 184,
+		'msm8274'        : 185,
+		'msm8674'        : 186,
+		'msm8974_pro'    : 194,
+		'ipq8062'        : 201,
+		'ipq8064'        : 202,
+		'ipq8066'        : 203,
+		'msm8916'        : 206,
+		'apq8074_aa'     : 208,
+		'apq8074_ab'     : 209,
+		'apq8074_pro'    : 210,
+		'msm8274_aa'     : 211,
+		'msm8274_ab'     : 212,
+		'msm8274_pro'    : 213,
+		'msm8674_aa'     : 214,
+		'msm8674_ab'     : 215,
+		'msm8674_pro'    : 216,
+		'msm8974_aa'     : 217,
+		'msm8974_ab'     : 218,
+		'apq8064_au'     : 244,
+		'msm8909'        : 245,
+		'msm8996'        : 246,
+		'apq8016'        : 247,
+		'msm8216'        : 248,
+		'ipq4019'        : 273,
+	}
+
+platform_type = {
+		'cdp'         : 1,
+		'ffa'         : 2,
+		'fluid'       : 3,
+		'fusion'      : 4,
+		'oem'         : 5,
+		'qt'          : 6,
+		'mtp_mdm'     : 7,
+		'mtp'         : 8,
+		'liquid'      : 9,
+		'dragonboard' : 10,
+		'qrd'         : 11,
+		'evb'         : 12,
+		'hrd'         : 13,
+		'dtv'         : 14,
+		'rumi'        : 15,
+		'virtio'      : 16,
+		'xpm'         : 20,
+		'rcm'         : 21,
+		'stp'         : 23,
+		'sbc'         : 24,
+		'cls'         : 29,
+		}
+
+pmic_ids = {
+		'pm8941'   : 1,
+		'pm8841'   : 2,
+		'pm8019'   : 3,
+		'pm8026'   : 4,
+		'pm8110'   : 5,
+		'pma8084'  : 6,
+		'pmi8962'  : 7,
+		'pmd9635'  : 8,
+		'pm8994'   : 9,
+		'pmi8994'  : 10,
+		'pm8916'   : 11,
+		'pm8004'   : 12,
+		'pm8909'   : 13,
+		'pm2433'   : 14,
+		'pmd9655'  : 15,
+		'pm8950'   : 16,
+		'pmi8950'  : 17,
+		'pmk8001'  : 18,
+		'pmi8996'  : 19,
+		'pm8998'   : 20,
+		'pmi8998'  : 21,
+		'pm8953'   : 22,
+		'smb1380'  : 23,
+		'pm8005'   : 24,
+		'pm8937'   : 25,
+	}
+
+boot_device_ids = { 'emmc_sdc1' : 2, 'ufs' : 4 }
+boot_device_ids_mdm = { 'emmc_sdc1' : 3 }
+panel_ids = { 'hd' : 0, '720p' : 1, 'qHD' : 2, 'fWVGA' : 3 }
+
+class QcomIds(object):
+
+	pattern = re.compile(r'''
+	qcom,(?P<soc>\w+) # SoC (req)
+	(-v(?P<soc_major>\d+)(.(?P<soc_minor>\d+))?)? # SoC version (opt)
+	(-(?P<foundry>\d+))? # foundry (opt)
+	-(?P<platform>\w+) # Platform (req)
+	(/(?P<platform_sub>\d+))? # Number for platform sub (opt)
+	(-v(?P<plat_major>\d+)(.(?P<plat_minor>\d+))?)? # Plat version (opt)
+	(-(?P<mb>\d+)MB)? # MB part (opt)
+	(-(?P<panel>\w+)-panel)? # panel type (opt)
+	(-boot-(?P<boot>\w+))? # boot type (opt)
+	# And four pmics all optional
+	(-(?P<pmic0>\w+)(-v(?P<pmic0_major>\d+)(.(?P<pmic0_minor>\d+))?)?)?
+	(-(?P<pmic1>\w+)(-v(?P<pmic1_major>\d+)(.(?P<pmic1_minor>\d+))?)?)?
+	(-(?P<pmic2>\w+)(-v(?P<pmic2_major>\d+)(.(?P<pmic2_minor>\d+))?)?)?
+	(-(?P<pmic3>\w+)(-v(?P<pmic3_major>\d+)(.(?P<pmic3_minor>\d+))?)?)?
+	''', re.VERBOSE)
+
+	def __init__(self, compat):
+		self.msm_id = [None, None]
+		self.board_id = [None, None]
+		self.pmic_id = [None, None, None, None]
+
+		matches = QcomIds.pattern.match(compat).groupdict()
+
+		foundry = int(matches['foundry'] or 0)
+		self.msm_id[0] = soc_ids[matches['soc']] | (foundry << 16)
+		major = int(matches['soc_major'] or 0)
+		minor = int(matches['soc_minor'] or 0)
+		self.msm_id[1] = major << 16 | minor
+
+		plat = platform_type[matches['platform']]
+		subtype = int(matches['platform_sub'] or 0)
+		major = int(matches['plat_major'] or 0)
+		minor = int(matches['plat_minor'] or 0)
+		self.board_id[0] = plat | minor << 8 | major << 16 | subtype << 24
+		self.board_id[1] = 0
+
+		for i in xrange(4):
+			s = 'pmic' + str(i)
+			if matches[s]:
+				pmic = pmic_ids[matches[s]]
+			else:
+				pmic = 0
+			major = int(matches[s + '_major'] or 0)
+			minor = int(matches[s + '_minor'] or 0)
+			self.pmic_id[i] = pmic | major << 16 | minor << 8
 
 @total_ordering
 class DTRecord:
@@ -102,6 +249,7 @@ class DTRecord:
 		return False
 
 def generate_records(f, dtc, pagesize):
+	version = None
 	size = os.stat(f).st_size
 	mod = size % pagesize
 	if mod != 0:
@@ -111,7 +259,13 @@ def generate_records(f, dtc, pagesize):
 						  f, "/", "qcom,msm-id"],
 						  stderr=subprocess.PIPE)
 	except subprocess.CalledProcessError:
-		sys.exit("%s is missing qcom,msm-id?" % f)
+		msm_id = None
+		try:
+			compats = subprocess.check_output([os.path.join(dtc, "fdtget"),
+						  f, "-ts", "/", "compatible"],
+						  stderr=subprocess.PIPE)
+		except subprocess.CalledProcessError:
+			sys.exit("%s is missing compatible?" % f)
 
 	try:
 		board_id = subprocess.check_output([os.path.join(dtc, "fdtget"),
@@ -133,7 +287,7 @@ def generate_records(f, dtc, pagesize):
 		x = iter(msm_id.split(" "))
 		msm_id = zip(x, x)
 		version = 2
-	else:
+	elif msm_id:
 		x = iter(msm_id.split(" "))
 		msm_id = zip(x, x, x)
 		version = 1
@@ -164,6 +318,15 @@ def generate_records(f, dtc, pagesize):
 							    pmic0, pmic1, pmic2,
 							    pmic3, 0, size, f,
 							    version)]
+	else:
+		version = 3
+		ids = [QcomIds(compat) for compat in compats.split(" ")
+				if QcomIds.pattern.match(compat)]
+		records += [DTRecord(x.msm_id[0], x.board_id[0], x.board_id[1],
+				     x.msm_id[1], x.pmic_id[0], x.pmic_id[1],
+				     x.pmic_id[2], x.pmic_id[3], 0, size, f,
+				     version) for x in ids]
+
 	return records
 
 def write_padding(f, pagesize):
