@@ -36,6 +36,7 @@ USAGE="$prog <arch> [initrd] [options]
     --modules            include modules in ramdisk
     --directory=<dir>    include directory in ramdisk
     --dirty              skip cleanup
+    -v                   be verbose
 "
 
 exe=$(readlink -f "$0")
@@ -74,7 +75,7 @@ then
 fi
 
 image=zImage pagesize=2048 cmdline= base= initrd= needs_fixup= dtb= modules=
-extra_dir= dtbs= dtarg= arch= uImage= dirty=
+extra_dir= dtbs= dtarg= arch= uImage= dirty= verbose=
 target="$1"
 
 case "$target" in
@@ -135,6 +136,9 @@ do
 	--dirty)
 		dirty=t
 		;;
+	-v)
+		verbose=t
+		;;
 	*)
 		initrd="$1"
 		if ! test -e "$initrd"
@@ -158,6 +162,14 @@ do
 	shift
 done
 
+silence=
+make_silence=
+if test -z "$verbose"
+then
+	silence='>/dev/null 2>&1'
+	make_silence=-s
+fi
+
 (
 cd $KOBJ &&
 
@@ -169,7 +181,7 @@ then
 	fi
 
 	rm -rf modules &&
-	INSTALL_MOD_PATH=modules make modules_install > /dev/null 2>&1 &&
+	INSTALL_MOD_PATH=modules make $make_silence modules_install &&
 	(
 		cd modules && find . | cpio --quiet -o -H newc
 	) | gzip -n -9 > initrd-modules.gz &&
@@ -234,16 +246,16 @@ fi
 if test -n "$dtbs"
 then
 	rm -rf dtbs &&
-	INSTALL_DTBS_PATH=dtbs make ARCH=$arch dtbs_install > /dev/null 2>&1 &&
-	"$META_ROOT/dtbTool" --page-size $pagesize -o .dtblob dtbs/$dtbs > /dev/null 2>&1 &&
+	INSTALL_DTBS_PATH=dtbs make $make_silence ARCH=$arch dtbs_install &&
+	eval "$META_ROOT/dtbTool --page-size $pagesize -o .dtblob dtbs/$dtbs $silence" &&
 	dtarg="--dt .dtblob" || die "Can't build dtbs"
 fi
 
 if test -n "$uImage"
 then
-	mkimage -A $arch -O linux -C none -T kernel \
+	eval "mkimage -A $arch -O linux -C none -T kernel \
 		-a $base -e $base -n "$target kernel" \
-		-d "$image" $BOOTIMG_DIR/uImage-$target > /dev/null 2>&1 &&
+		-d "$image" $BOOTIMG_DIR/uImage-$target $silence" &&
 	echo "Packaged $(readlink -f $BOOTIMG_DIR/uImage-$target)" &&
 	ln -fs uImage-$target $BOOTIMG_DIR/uImage
 else
