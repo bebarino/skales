@@ -174,7 +174,7 @@ class QcomIds(object):
 		self.board_id[0] = plat | minor << 8 | major << 16 | subtype << 24
 		self.board_id[1] = 0
 
-		for i in xrange(4):
+		for i in range(4):
 			s = 'pmic' + str(i)
 			if matches[s]:
 				pmic = pmic_ids[matches[s]]
@@ -257,44 +257,48 @@ def generate_records(f, dtc, pagesize):
 	try:
 		msm_id = subprocess.check_output([os.path.join(dtc, "fdtget"),
 						  f, "/", "qcom,msm-id"],
-						  stderr=subprocess.PIPE)
+						  stderr=subprocess.PIPE,
+						  universal_newlines=True)
 	except subprocess.CalledProcessError:
 		msm_id = None
 		try:
 			compats = subprocess.check_output([os.path.join(dtc, "fdtget"),
 						  f, "-ts", "/", "compatible"],
-						  stderr=subprocess.PIPE)
+						  stderr=subprocess.PIPE,
+						  universal_newlines=True)
 		except subprocess.CalledProcessError:
 			sys.exit("%s is missing compatible?" % f)
 
 	try:
 		board_id = subprocess.check_output([os.path.join(dtc, "fdtget"),
 						  f, "/", "qcom,board-id"],
-						  stderr=subprocess.PIPE)
+						  stderr=subprocess.PIPE,
+						  universal_newlines=True)
 	except subprocess.CalledProcessError:
 		board_id = None
 
 	try:
 		pmic_id = subprocess.check_output([os.path.join(dtc, "fdtget"),
 						  f, "/", "qcom,pmic-id"],
-						  stderr=subprocess.PIPE)
+						  stderr=subprocess.PIPE,
+						  universal_newlines=True)
 	except subprocess.CalledProcessError:
 		pmic_id = None
 
 	if board_id:
 		x = iter(board_id.split(" "))
-		board_id = zip(x, x)
+		board_id = list(zip(x, x))
 		x = iter(msm_id.split(" "))
-		msm_id = zip(x, x)
+		msm_id = list(zip(x, x))
 		version = 2
 	elif msm_id:
 		x = iter(msm_id.split(" "))
-		msm_id = zip(x, x, x)
+		msm_id = list(zip(x, x, x))
 		version = 1
 
 	if pmic_id:
 		x = iter(pmic_id.split(" "))
-		pmic_id = zip(x, x, x, x)
+		pmic_id = list(zip(x, x, x, x))
 		version = 3
 
 	records = []
@@ -333,7 +337,7 @@ def write_padding(f, pagesize):
 	count = pagesize - (f.tell() % pagesize)
 	# Write padding as long as we aren't already aligned to a page
 	if count != pagesize:
-		output.write("".join(['\x00' for x in xrange(count)]))
+		output.write(b"".join([b'\x00' for x in range(count)]))
 
 if __name__ == "__main__":
 	usage = ("""%prog -o <output file> <input DTB directory> [options]""")
@@ -403,11 +407,11 @@ if __name__ == "__main__":
 		r.offset = found[r.f]
 
 	hdr_format = "<4sII"
-	blob = pack(hdr_format, "QCDT", version, len(records))
+	blob = pack(hdr_format, b"QCDT", version, len(records))
 
 	if version == 1:
 		blob_format = "<IIIII"
-		blob += "".join([pack(blob_format,
+		blob += b"".join([pack(blob_format,
 			  r.plat_id,
 			  r.variant_id,
 			  r.subtype_id,
@@ -415,7 +419,7 @@ if __name__ == "__main__":
 			  r.size) for r in records])
 	elif version == 2:
 		blob_format = "<IIIIII"
-		blob += "".join([pack(blob_format,
+		blob += b"".join([pack(blob_format,
 			  r.plat_id,
 			  r.variant_id,
 			  r.subtype_id,
@@ -424,7 +428,7 @@ if __name__ == "__main__":
 			  r.size) for r in records])
 	elif version == 3:
 		blob_format = "<IIIIIIIIII"
-		blob += "".join([pack(blob_format,
+		blob += b"".join([pack(blob_format,
 			  r.plat_id,
 			  r.variant_id,
 			  r.subtype_id,
