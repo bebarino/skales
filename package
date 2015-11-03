@@ -181,7 +181,7 @@ then
 	fi
 
 	rm -rf modules &&
-	INSTALL_MOD_PATH=modules make $make_silence modules_install &&
+	INSTALL_MOD_PATH=modules make ARCH=$arch $make_silence modules_install &&
 	(
 		cd modules && find . | cpio --quiet -o -H newc
 	) | gzip -n -9 > initrd-modules.gz &&
