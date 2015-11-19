@@ -31,10 +31,10 @@
 #
 
 from functools import total_ordering
-from struct import pack
+from struct import pack, unpack
+import ctypes
 import os
 import sys
-import subprocess
 import re
 from optparse import OptionParser
 
@@ -135,6 +135,78 @@ boot_device_ids = { 'emmc_sdc1' : 2, 'ufs' : 4 }
 boot_device_ids_mdm = { 'emmc_sdc1' : 3 }
 panel_ids = { 'hd' : 0, '720p' : 1, 'qHD' : 2, 'fWVGA' : 3 }
 
+try:
+	libfdt = ctypes.CDLL('libfdt.so')
+except OSError:
+	sys.exit("libfdt is missing, please install it")
+
+prototype = ctypes.CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p)
+paramflags = (1, "fdt", None), (1, "name", None)
+fdt_get_alias = prototype(("fdt_get_alias", libfdt), paramflags)
+
+prototype = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_void_p, ctypes.c_char_p)
+paramflags = (1, "fdt", None), (1, "path", None)
+fdt_path_offset = prototype(("fdt_path_offset", libfdt), paramflags)
+
+prototype = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_void_p)
+paramflags = (1, "fdt", None), (1, "nodeoffset", None), (1, "name", None), (1, "lenp", None)
+fdt_getprop = prototype(("fdt_getprop", libfdt), paramflags)
+
+def fdt_get_property_int(blob, nodeoffset, name):
+	"""Return an int list of property name's values at nodeoffset
+	"""
+	vals = []
+	i = 0
+	length = ctypes.c_int(0)
+	name = str.encode(name)
+
+	addr = fdt_getprop(blob, nodeoffset, name, ctypes.byref(length))
+	if addr is None:
+		return None
+
+	addr = ctypes.cast(addr, ctypes.POINTER(ctypes.c_uint32))
+
+	while i < length.value / 4:
+		# Convert from big-endian to native endianness
+		val = unpack("I", pack(">I", addr[i]))[0]
+		vals.append(val)
+		i += 1
+
+	return vals
+
+def fdt_get_property_string(blob, nodeoffset, name):
+	"""Return a string list of property name's values at nodeoffset
+	"""
+	vals = []
+	i = 0
+	length = ctypes.c_int(0)
+	name = str.encode(name)
+
+	val = fdt_getprop(blob, nodeoffset, name, ctypes.byref(length))
+	if val is None:
+		return vals
+
+	while i < length.value:
+		c = ctypes.cast(val + i, ctypes.c_char_p).value.decode("utf-8")
+		vals.append(c)
+		i += len(vals[-1]) + 1 # Skip the NUL character
+
+	return vals
+
+def find_pmics(blob):
+	pmics = []
+
+	for usid in ["usid0", "usid2", "usid4", "usid6"]:
+		path = fdt_get_alias(blob, str.encode(usid))
+		if path is None:
+			pmics.append("")
+			continue
+		off = fdt_path_offset(blob, path)
+		pmic = fdt_get_property_string(blob, off, "compatible")
+		pmics.append(pmic[0])
+
+	return pmics
+
 class QcomIds(object):
 
 	pattern = re.compile(r'''
@@ -144,20 +216,16 @@ class QcomIds(object):
 	-(?P<platform>\w+) # Platform (req)
 	(/(?P<platform_sub>\d+))? # Number for platform sub (opt)
 	(-v(?P<plat_major>\d+)(.(?P<plat_minor>\d+))?)? # Plat version (opt)
-	(-(?P<mb>\d+)MB)? # MB part (opt)
-	(-(?P<panel>\w+)-panel)? # panel type (opt)
-	(-boot-(?P<boot>\w+))? # boot type (opt)
-	# And four pmics all optional
-	(-(?P<pmic0>\w+)(-v(?P<pmic0_major>\d+)(.(?P<pmic0_minor>\d+))?)?)?
-	(-(?P<pmic1>\w+)(-v(?P<pmic1_major>\d+)(.(?P<pmic1_minor>\d+))?)?)?
-	(-(?P<pmic2>\w+)(-v(?P<pmic2_major>\d+)(.(?P<pmic2_minor>\d+))?)?)?
-	(-(?P<pmic3>\w+)(-v(?P<pmic3_major>\d+)(.(?P<pmic3_minor>\d+))?)?)?
 	''', re.VERBOSE)
 
-	def __init__(self, compat):
-		self.msm_id = [None, None]
-		self.board_id = [None, None]
-		self.pmic_id = [None, None, None, None]
+	pmic_pattern = re.compile(r'''
+	qcom,(?P<pmic>\w+)(-v(?P<major>\d+)(.(?P<minor>\d+))?)?
+	''', re.VERBOSE)
+
+	def __init__(self, compat, pmics):
+		self.msm_id = [0, 0]
+		self.board_id = [0, 0]
+		self.pmic_id = [0, 0, 0, 0]
 
 		matches = QcomIds.pattern.match(compat).groupdict()
 
@@ -174,15 +242,15 @@ class QcomIds(object):
 		self.board_id[0] = plat | minor << 8 | major << 16 | subtype << 24
 		self.board_id[1] = 0
 
-		for i in range(4):
-			s = 'pmic' + str(i)
-			if matches[s]:
-				pmic = pmic_ids[matches[s]]
-			else:
-				pmic = 0
-			major = int(matches[s + '_major'] or 0)
-			minor = int(matches[s + '_minor'] or 0)
-			self.pmic_id[i] = pmic | major << 16 | minor << 8
+		for (i, pmic) in enumerate(pmics):
+			if len(pmic) == 0:
+				continue
+
+			matches = QcomIds.pmic_pattern.match(pmic).groupdict()
+			model = pmic_ids[matches['pmic']]
+			major = int(matches['major'] or 0)
+			minor = int(matches['minor'] or 0)
+			self.pmic_id[i] = model | major << 16 | minor << 8
 
 @total_ordering
 class DTRecord:
@@ -248,56 +316,39 @@ class DTRecord:
 			return True
 		return False
 
-def generate_records(f, dtc, pagesize):
+def generate_records(f, pagesize):
 	version = None
 	size = os.stat(f).st_size
 	mod = size % pagesize
 	if mod != 0:
 		size += pagesize - mod;
-	try:
-		msm_id = subprocess.check_output([os.path.join(dtc, "fdtget"),
-						  f, "/", "qcom,msm-id"],
-						  stderr=subprocess.PIPE,
-						  universal_newlines=True)
-	except subprocess.CalledProcessError:
-		msm_id = None
-		try:
-			compats = subprocess.check_output([os.path.join(dtc, "fdtget"),
-						  f, "-ts", "/", "compatible"],
-						  stderr=subprocess.PIPE,
-						  universal_newlines=True)
-		except subprocess.CalledProcessError:
+
+	fi = open(f, 'rb')
+	s = ctypes.create_string_buffer(fi.read())
+	blob = ctypes.byref(s)
+
+	msm_id = fdt_get_property_int(blob, 0, "qcom,msm-id")
+	if msm_id is None:
+		compats = fdt_get_property_string(blob, 0, "compatible")
+		if len(compats) == 0:
 			sys.exit("%s is missing compatible?" % f)
 
-	try:
-		board_id = subprocess.check_output([os.path.join(dtc, "fdtget"),
-						  f, "/", "qcom,board-id"],
-						  stderr=subprocess.PIPE,
-						  universal_newlines=True)
-	except subprocess.CalledProcessError:
-		board_id = None
-
-	try:
-		pmic_id = subprocess.check_output([os.path.join(dtc, "fdtget"),
-						  f, "/", "qcom,pmic-id"],
-						  stderr=subprocess.PIPE,
-						  universal_newlines=True)
-	except subprocess.CalledProcessError:
-		pmic_id = None
+	board_id = fdt_get_property_int(blob, 0, "qcom,board-id")
+	pmic_id = fdt_get_property_int(blob, 0, "qcom,pmic-id")
 
 	if board_id:
-		x = iter(board_id.split(" "))
+		x = iter(board_id)
 		board_id = list(zip(x, x))
-		x = iter(msm_id.split(" "))
+		x = iter(msm_id)
 		msm_id = list(zip(x, x))
 		version = 2
 	elif msm_id:
-		x = iter(msm_id.split(" "))
+		x = iter(msm_id)
 		msm_id = list(zip(x, x, x))
 		version = 1
 
 	if pmic_id:
-		x = iter(pmic_id.split(" "))
+		x = iter(pmic_id)
 		pmic_id = list(zip(x, x, x, x))
 		version = 3
 
@@ -324,7 +375,8 @@ def generate_records(f, dtc, pagesize):
 							    version)]
 	else:
 		version = 3
-		ids = [QcomIds(compat) for compat in compats.split(" ")
+		pmics = find_pmics(blob)
+		ids = [QcomIds(compat, pmics) for compat in compats
 				if QcomIds.pattern.match(compat)]
 		records += [DTRecord(x.msm_id[0], x.board_id[0], x.board_id[1],
 				     x.msm_id[1], x.pmic_id[0], x.pmic_id[1],
@@ -372,7 +424,7 @@ if __name__ == "__main__":
 
 	records = []
 	for f in flist:
-		records += generate_records(f, options.dtc, pagesize)
+		records += generate_records(f, pagesize)
 
 	records.sort()
 	if options.version is None:
