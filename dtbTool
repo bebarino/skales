@@ -426,6 +426,9 @@ if __name__ == "__main__":
 	for f in flist:
 		records += generate_records(f, pagesize)
 
+	if len(records) == 0:
+		sys.exit("No valid dtbs found")
+
 	records.sort()
 	if options.version is None:
 		version = records[0].version
