@@ -12,11 +12,10 @@ your $PATH.
 Prerequisites
 -------------
 
-To use dtbTool you should have the 'fdtget' program. This is commonly
-distributed as part of the device tree compiler package.
+To use dtbTool you should have libfdt installed.
 
- device-tree-compiler (debian)
- dtc (redhat)
+ libfdt-dev (debian)
+ libfdt-devel (redhat)
  sys-apps/dtc (gentoo)
 
 Background
