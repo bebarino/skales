@@ -37,10 +37,7 @@ directories:
  'dtbTool' - Clone of dtbTool from Android (creates a QCDT image)
 
  'init-branch' - Command to initialize a new working tree based off a
-                 particular branch. This relies on the git-new-workdir script
-		 from the git.git repository to be present in your path. The
-		 latest version of the script can be downloaded on
-		 kernel.org[1].
+                 particular branch.
 
  'initrds' - Directory containing initrds to use as ramdisks (user supplied)
 
@@ -132,7 +129,3 @@ these steps:
         <configure things>
 
 Continue at step 3 listed above in the simple workflow.
-
-Footnotes
----------
-[1] http://git.kernel.org/?p=git/git.git;a=blob_plain;f=contrib/workdir/git-new-workdir
