@@ -1,3 +1,6 @@
 b/
 config.sh
 .*
+/kobj/
+/kernel/
+*.img
