@@ -78,6 +78,7 @@ soc_ids = {
 		'msm8216'        : 248,
 		'ipq4019'        : 273,
 		'apq8096'        : 291,
+		'msm8996sg'      : 305,
 	}
 
 platform_type = {
