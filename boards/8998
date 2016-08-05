@@ -26,7 +26,7 @@
 #  IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-cmdline=""
+cmdline="clk_ignore_unused"
 base=0x00000000
 dtb=qcom/msm8998-mtp.dtb
 arch=arm64
