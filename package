@@ -74,7 +74,14 @@ then
 	usage
 fi
 
-image=zImage pagesize=2048 cmdline= base= initrd= needs_fixup= dtb= modules=
+if test "$arch" = "arm"
+then
+	image=zImage
+else
+	image=Image.gz
+fi
+
+pagesize=2048 cmdline= base= initrd= needs_fixup= dtb= modules=
 extra_dir= dtbs= dtarg= arch= uImage= dirty= verbose=
 target="$1"
 
@@ -211,7 +218,7 @@ then
 	dtdir1=arch/arm/boot/dts/
 	dtdir2=arch/arm/boot/
 else
-	image=arch/arm64/boot/Image
+	image=arch/arm64/boot/$image
 	dtdir1=arch/arm64/boot/dts/
 	dtdir2=arch/arm64/boot/dts/
 fi
