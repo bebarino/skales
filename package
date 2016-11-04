@@ -74,13 +74,6 @@ then
 	usage
 fi
 
-if test "$arch" = "arm"
-then
-	image=zImage
-else
-	image=Image.gz
-fi
-
 pagesize=2048 cmdline= base= initrd= needs_fixup= dtb= modules=
 extra_dir= dtbs= dtarg= arch= uImage= dirty= verbose=
 target="$1"
@@ -98,6 +91,13 @@ case "$target" in
 	fi
 	;;
 esac
+
+if test "$arch" = "arm"
+then
+	image=zImage
+else
+	image=Image.gz
+fi
 
 shift
 
