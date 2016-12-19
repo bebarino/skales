@@ -136,3 +136,4 @@ if __name__ == "__main__":
 	write_padding(output, pagesize)
 	if options.devicetree and not append_dtb:
 		output.write(devicetree.read())
+	write_padding(output, pagesize)
