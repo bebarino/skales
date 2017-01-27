@@ -27,7 +27,7 @@
 #
 
 cmdline="console=ttyMSM0,115200,n8"
-base=0x00000000
+base=0x80000000
 dtbs=qcom/
 arch=arm64
 image=Image
