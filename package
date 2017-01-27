@@ -92,11 +92,14 @@ case "$target" in
 	;;
 esac
 
-if test "$arch" = "arm"
+if test -z $image
 then
-	image=zImage
-else
-	image=Image.gz
+	if test "$arch" = "arm"
+	then
+		image=zImage
+	else
+		image=Image.gz
+	fi
 fi
 
 shift
