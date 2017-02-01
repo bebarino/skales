@@ -57,6 +57,8 @@ if __name__ == "__main__":
 	parser.add_option("--pagesize", type="int", dest="pagesize",
 			  default=2048,
 			  help="NAND pagesize [default: %default]")
+	parser.add_option("--board", dest="board", default="",
+			  help="Board identifier")
 	# New options
 	parser.add_option("--ramdisk_base", type="int", dest="ramdisk_base",
 			  default=-1, help="Start address of ramdisk image")
@@ -75,6 +77,8 @@ if __name__ == "__main__":
 		parser.error("Must specify --base")
 	if options.cmdline is None:
 		parser.error("Must specify --cmdline")
+	if len(options.board) > 16:
+		parser.error("--boards argument must be <= 16 characters")
 
 	try:
 		kernel = open(options.kernel, 'rb')
@@ -123,7 +127,7 @@ if __name__ == "__main__":
 			  tags,
 			  options.pagesize,
 			  dtb_size, 0,
-			  b"",
+			  options.board.encode(),
 			  options.cmdline.encode(),
 			  123456, 123456, 123456, 123456, 123456, 123456,
 			  0, 0))
