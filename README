@@ -14,7 +14,7 @@ Prerequisites
 
 To use dtbTool you should have libfdt installed.
 
- libfdt-dev (debian)
+ libfdt1 (debian)
  libfdt-devel (redhat)
  sys-apps/dtc (gentoo)
  community/dtc (arch)
