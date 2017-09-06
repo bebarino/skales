@@ -259,6 +259,16 @@ class QcomIds(object):
 			minor = int(matches['minor'] or 0)
 			self.pmic_id[i] = model | major << 16 | minor << 8
 
+	@staticmethod
+	def valid(compat):
+		match = QcomIds.pattern.match(compat)
+
+		if match:
+			matches = match.groupdict()
+			return (matches['soc'] in soc_ids and
+				matches['platform'] in platform_type)
+		return False
+
 @total_ordering
 class DTRecord:
 	def __init__(self, plat_id, variant_id, subtype_id, soc_rev, pmic0, pmic1, pmic2, pmic3, offset, size, f, version):
@@ -384,7 +394,7 @@ def generate_records(f, pagesize):
 		version = 3
 		pmics = find_pmics(blob)
 		ids = [QcomIds(compat, pmics) for compat in compats
-				if QcomIds.pattern.match(compat)]
+				if QcomIds.valid(compat)]
 		records += [DTRecord(x.msm_id[0], x.board_id[0], x.board_id[1],
 				     x.msm_id[1], x.pmic_id[0], x.pmic_id[1],
 				     x.pmic_id[2], x.pmic_id[3], 0, size, f,
