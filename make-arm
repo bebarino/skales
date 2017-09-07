@@ -55,11 +55,11 @@ fi
 
 die()
 {
-	echo Build failure
+	echo ${1:-Failure}
 	exit 1
 }
 
-if test -n "$ARCH" && test "$ARCH" != "arm"
+if test -n "$ARCH" -a "$ARCH" != "arm"
 then
 	die "Building for wrong arch"
 fi
@@ -77,7 +77,7 @@ fi
 config=arch/arm/configs/${defconfig}
 
 # cp $config ../kobj/.config
-make ARCH=arm $O_STR ${defconfig} || die
+make ARCH=arm $O_STR ${defconfig} || die "Build failure"
 make ARCH=arm $O_STR "$@"
 status=$?
 
