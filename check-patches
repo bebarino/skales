@@ -1,0 +1,153 @@
+#!/bin/sh
+
+# Cross compilers
+ARM64_CC=~/compilers/gcc-12.2.0-nolibc/aarch64-linux/bin/aarch64-linux-
+ARM_CC=~/compilers/gcc-12.2.0-nolibc/arm-linux-gnueabi/bin/arm-linux-gnueabi-
+SMATCH=~/smatch/smatch
+
+checkpatch_ignore="FILE_PATH_CHANGES" # Ignore maintainers file updates
+
+range="$@"
+
+if git rev-parse -q --verify $range > /dev/null 2>&1
+then
+	echo "Must specify a rev-list"
+	exit 1
+fi
+
+hash=
+git rev-list $(git rev-parse "$range") |
+while read hash
+do
+	#git --no-pager show -s --pretty="Checking %s" $hash
+	git format-patch --no-cc --no-to --stdout -1 $hash |
+	./scripts/checkpatch.pl -q --ignore="$checkpatch_ignore" - ||
+	git --no-pager show -s --pretty="in patch '%s' (%h)" $hash
+done
+
+files=$(git diff --name-only --diff-filter=d $range)
+cs=
+yamls=
+kunits=
+for file in $files
+do
+	case $file in
+	*_test.c)
+		kunits="$file $kunits"
+		;;
+	*.c)
+		stem=${file%.c}
+		cs="$stem.o $cs"
+		;;
+	*.yaml)
+		yamls="$file $yamls"
+		;;
+	esac
+done
+
+ret=0
+
+mkdir -p ../kobj-x86
+mkdir -p ../kobj-arm64
+
+make_arm ()
+{
+	make -k ARCH=arm O=../kobj/ CROSS_COMPILE=$ARM_CC -s "$@" || echo "Failed arm build"
+}
+
+make_arm64 ()
+{
+	make -k ARCH=arm64 O=../kobj-arm64/ CROSS_COMPILE=$ARM64_CC -s "$@" || echo "Failed arm64 build"
+}
+
+make_x86 ()
+{
+	make -k ARCH=x86_64 O=../kobj-x86/ -s "$@" CROSS_COMPILE= || echo "Failed x86 build"
+}
+
+echo "Compiling $cs..."
+if test -n "$cs"
+then
+	make_arm allyesconfig
+
+	echo "Checking arm..."
+	make_arm W=1 $cs
+	echo "Done"
+
+	echo "Sparse (arm)..."
+	make_arm C=2 CF="-D__CHECK_ENDIAN__" $cs
+	if test $? -ne 0
+	then
+		ret=1
+	fi
+	echo "Done checking with sparse"
+
+	echo "Smatch (arm)..."
+	make_arm C=2 CHECK="$SMATCH --project=kernel" $cs
+	if test $? -ne 0
+	then
+		ret=1
+	fi
+	echo "Done checking with smatch"
+
+	make_arm64 allyesconfig
+
+	echo "Checking arm64..."
+	make_arm64 W=1 $cs
+	echo "Done"
+
+	echo "Sparse (arm64)..."
+	make_arm64 C=2 CF="-D__CHECK_ENDIAN__" $cs
+	if test $? -ne 0
+	then
+		ret=1
+	fi
+	echo "Done checking with sparse"
+
+	echo "Smatch (arm64)..."
+	make_arm64 C=2 CHECK="$SMATCH --project=kernel" $cs
+	if test $? -ne 0
+	then
+		ret=1
+	fi
+	echo "Done checking with smatch"
+
+	make_x86 allyesconfig
+
+	echo "Checking x86..."
+	make_x86 W=1 $cs
+	echo "Done"
+
+	echo "Sparse (x86)..."
+	make_x86 C=2 CF="-D__CHECK_ENDIAN__" $cs
+	if test $? -ne 0
+	then
+		ret=1
+	fi
+	echo "Done checking with sparse"
+
+	echo "Smatch (x86)..."
+	make_x86 C=2 CHECK="$SMATCH --project=kernel" $cs
+	if test $? -ne 0
+	then
+		ret=1
+	fi
+	echo "Done checking with smatch"
+fi
+echo "Compiling done"
+
+if test -n "$yamls"
+then
+	echo "Checking $yamls..."
+	make_arm64 allyesconfig
+	for y in $yamls
+	do
+		make -s DT_SCHEMA_FILES="$y" ARCH=arm64 O=../kobj-arm64/ CROSS_COMPILE=$ARM64_CC dt_binding_check 
+	done
+	echo "Done checking yaml"
+fi
+
+echo "Runing kunit tests..."
+./tools/testing/kunit/kunit.py run  --kunitconfig=drivers/clk  
+
+exit $ret
