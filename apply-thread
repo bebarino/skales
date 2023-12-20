@@ -1,0 +1,102 @@
+#!/bin/sh
+#
+# Takes a message-id on the commandline and finds the thread,
+# squashes the trailers into the patches and then applies
+# them to whatever base they're supposed to be part of
+#
+# TODO:
+#  * Pick tags from cover letter replies and apply to all patches
+#  * Make user interface friendlier with a help message, and some
+#    options, etc.
+#  * A problem exists with notmuch outputting an mbox thread when the
+#    first email isn't a cover letter and is actually a "patch #1".
+#    In this case it outputs the replies to the first patch interspersed
+#    with the other patches that were also replies to the first patch.
+#    One idea is to reorder the mbox before. Another is to detect that
+#    some patch is a reply to something that isn't the previous patch
+#    and then hunt down that patch in the list of patches that have 
+#    been processed.
+#
+
+thread_id="$(notmuch search --format=text --output=threads id:$1)"
+patch_dir="$(mktemp -d)" 
+
+notmuch show --format=mbox "$thread_id" | \
+git mailsplit -o"$patch_dir" --mboxrd > /dev/null
+
+base_commit=
+last_patch=
+for msg in $patch_dir/*
+do
+	if test -z "$base_commit"
+	then
+		base_commit="$(sed -ne 's/^base-commit: //p' $msg)"
+	fi
+
+	git mailinfo -m $msg.msg $msg.patch < $msg > $msg.header || exit 1
+	if test -s $msg.patch
+	then
+		# Matches a patch email, add the link tag
+		last_patch=$msg
+
+		msgid="$(sed -ne 's/Message-I[dD]: //p' $msg.msg)"
+		msgid="${msgid#\<}"
+		msgid="${msgid%\>}"
+
+		git interpret-trailers --no-divider --in-place \
+			--trailer="Link: https://lore.kernel.org/r/$msgid" \
+			$msg.msg
+
+		au="$(sed -ne 's/^Author: //p' $msg.header)"
+		ae="$(sed -ne 's/^Email: //p' $msg.header)"
+
+		echo "From: $au <$ae>" > $msg
+		sed -e '/^Author: /d' -e '/Email: /d' $msg.header >> $msg
+		sed -e '/^Message-I[dD]: /d' $msg.msg >> $msg
+		cat $msg.patch >> $msg
+	else
+		# Must be some sort of reply
+		sed -i -e '/^>/d' $msg.msg	# Strip quoted part
+
+		trailers=
+		grep -e 'Fixes: [0-9a-f][0-9a-f]* (".*")' -o \
+		     -e '.*-by: .*@.*\..*' \
+		     < $msg.msg > "$patch_dir"/trailers
+		if test -s "$patch_dir"/trailers
+		then
+			while read trailer
+			do
+				trailers="--trailer='$trailer' $trailers"
+			done < $patch_dir/trailers
+
+			if test -n "$trailers" && test -n "$last_patch"
+			then
+				eval git interpret-trailers --unfold --where end --in-place \
+					$trailers $last_patch
+			fi
+		fi
+
+		rm $msg $patch_dir/trailers
+	fi
+	rm $msg.msg $msg.patch $msg.header
+done
+
+base_commit=
+if test -n "$base_commit"
+then
+	git checkout -q $base_commit || exit 1
+fi
+
+# Add a signed-off-by when it's not already somewhere in there
+for msg in $patch_dir/*
+do
+	sob="Signed-off-by: $(git config user.name) <$(git config user.email)>"
+	if ! grep -qe "$sob" $msg
+	then
+		git interpret-trailers --in-place --trailer="$sob" $msg
+	fi
+done
+
+git am -3 $patch_dir/*
+
+rm -rf $patch_dir
