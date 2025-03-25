@@ -1,0 +1,58 @@
+#!/bin/sh
+#
+
+git fetch -q linus
+git checkout -q linus/master
+git merge -q -m 'test' clk-next
+git merge -q -m 'test' spmi-next
+
+# Cross compilers
+ARM64_CC=~/compilers/gcc-12.2.0-nolibc/aarch64-linux/bin/aarch64-linux-
+ARM_CC=~/compilers/gcc-12.2.0-nolibc/arm-linux-gnueabi/bin/arm-linux-gnueabi-
+
+mkdir -p ../kobj-x86
+mkdir -p ../kobj-arm64
+mkdir -p ../kobj
+
+make_arm ()
+{
+	make -k ARCH=arm O=../kobj/ CROSS_COMPILE=$ARM_CC -s "$@"
+}
+
+make_arm_mod ()
+{
+	make -k ARCH=arm O=../kobj-mod/ CROSS_COMPILE=$ARM_CC -s "$@"
+}
+
+make_arm64 ()
+{
+	make -k ARCH=arm64 O=../kobj-arm64/ CROSS_COMPILE=$ARM64_CC -s "$@"
+}
+
+make_arm64_mod ()
+{
+	make -k ARCH=arm64 O=../kobj-arm64-mod/ CROSS_COMPILE=$ARM64_CC -s "$@"
+}
+
+make_x86 ()
+{
+	make -k ARCH=x86_64 O=../kobj-x86/ -s "$@" CROSS_COMPILE=
+}
+
+make_x86_mod ()
+{
+	make -k ARCH=x86_64 O=../kobj-x86-mod/ -s "$@" CROSS_COMPILE=
+}
+
+make_arm multi_v7_defconfig
+make_arm -j50
+
+make_arm64 allyesconfig
+make_arm64 -j50
+make_arm64_mod allmodconfig
+make_arm64_mod -j50
+
+make_x86 allyesconfig
+make_x86 -j50
+make_x86_mod allmodconfig
+make_x86_mod -j50
